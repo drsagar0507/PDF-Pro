@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, RotateCw } from 'lucide-react';
 import type { Annotation } from '../../lib/types';
-import { clamp } from '../../lib/geometry';
+import { clamp, textBoxHeight } from '../../lib/geometry';
+
+const ROTATABLE_KINDS = new Set(['image', 'text']);
 
 interface Props {
   ann: Annotation;
@@ -32,12 +34,16 @@ export default function AnnotationShape({
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const hasBox = 'x' in ann && 'width' in ann;
   const x = (ann as { x?: number }).x ?? 0;
   const y = (ann as { y?: number }).y ?? 0;
   const width = (ann as { width?: number }).width ?? 0;
-  const height = (ann as { height?: number }).height ?? 0;
+  const height =
+    ann.kind === 'text' ? textBoxHeight(ann.fontSize, ann.text) : ((ann as { height?: number }).height ?? 0);
+  const rotation = (ann as { rotation?: number }).rotation ?? 0;
+  const rotatable = ROTATABLE_KINDS.has(ann.kind);
 
   function startMove(e: React.PointerEvent) {
     if (!interactive || editing) return;
@@ -92,8 +98,39 @@ export default function AnnotationShape({
     window.addEventListener('pointerup', onUp);
   }
 
+  function startRotate(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    function angleFor(clientX: number, clientY: number) {
+      const deg = (Math.atan2(clientY - cy, clientX - cx) * 180) / Math.PI + 90;
+      return Math.round(((deg % 360) + 360) % 360);
+    }
+
+    function onMove(ev: PointerEvent) {
+      onChange({ rotation: angleFor(ev.clientX, ev.clientY) } as Partial<Annotation>);
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   const wrapperStyle: React.CSSProperties = hasBox
-    ? { position: 'absolute', left: x * zoom, top: y * zoom, width: width * zoom, height: height * zoom }
+    ? {
+        position: 'absolute',
+        left: x * zoom,
+        top: y * zoom,
+        width: width * zoom,
+        height: height * zoom,
+        transform: rotatable && rotation ? `rotate(${rotation}deg)` : undefined,
+      }
     : { position: 'absolute', left: (x - 12) * zoom, top: (y - 12) * zoom, width: 24 * zoom, height: 24 * zoom };
 
   let content: React.ReactNode = null;
@@ -170,6 +207,7 @@ export default function AnnotationShape({
 
   return (
     <div
+      ref={wrapperRef}
       style={{ ...wrapperStyle, pointerEvents: interactive ? 'auto' : 'none', cursor: interactive ? 'move' : 'default' }}
       onPointerDown={startMove}
       onClick={(e) => {
@@ -223,6 +261,18 @@ export default function AnnotationShape({
           onPointerDown={startResize}
           className="absolute -bottom-1.5 -right-1.5 h-3 w-3 cursor-nwse-resize rounded-full border-2 border-white bg-indigo-500 shadow"
         />
+      )}
+      {selected && interactive && hasBox && rotatable && (
+        <>
+          <div className="pointer-events-none absolute left-1/2 top-0 h-6 w-px -translate-x-1/2 -translate-y-6 bg-indigo-400" />
+          <div
+            onPointerDown={startRotate}
+            title="Drag to rotate"
+            className="absolute left-1/2 top-0 flex h-5 w-5 -translate-x-1/2 -translate-y-11 cursor-grab items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-white shadow active:cursor-grabbing"
+          >
+            <RotateCw size={11} />
+          </div>
+        </>
       )}
       {selected && interactive && (
         <button

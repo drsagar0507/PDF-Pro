@@ -74,6 +74,8 @@ export interface TextAnnotation extends BaseAnnotation {
   width: number;
   fontSize: number;
   text: string;
+  /** Free-form clockwise rotation in degrees, around the box's center. */
+  rotation?: number;
 }
 
 export interface NoteAnnotation extends BaseAnnotation {
@@ -91,6 +93,8 @@ export interface ImageAnnotation extends BaseAnnotation {
   width: number;
   height: number;
   dataUrl: string;
+  /** Free-form clockwise rotation in degrees, around the box's center. */
+  rotation?: number;
 }
 
 export interface ShapeAnnotation extends BaseAnnotation {

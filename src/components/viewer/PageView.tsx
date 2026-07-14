@@ -110,18 +110,22 @@ export default function PageView({ page, pageNumber }: Props) {
 
   function finishBoxCreate(x: number, y: number, w: number, h: number) {
     const color = annotateColor;
+    let newId: string | null = null;
     if (activeTool === 'highlight') {
-      addAnnotation(page.id, { kind: 'highlight', x, y, width: w, height: h, color, opacity: 0.42 });
+      newId = addAnnotation(page.id, { kind: 'highlight', x, y, width: w, height: h, color, opacity: 0.42 });
     } else if (activeTool === 'checkmark' || activeTool === 'xmark' || activeTool === 'circle' || activeTool === 'line') {
-      addAnnotation(page.id, { kind: activeTool, x, y, width: w, height: h, color: '#DC2626', strokeWidth: 3 });
+      newId = addAnnotation(page.id, { kind: activeTool, x, y, width: w, height: h, color: '#DC2626', strokeWidth: 3 });
     } else if (activeTool === 'signature' || activeTool === 'initials') {
       if (!activeSignatureDataUrl) {
         toast.error('Pick or create a signature first');
         return;
       }
-      addAnnotation(page.id, { kind: 'image', x, y, width: w, height: h, color, dataUrl: activeSignatureDataUrl });
+      newId = addAnnotation(page.id, { kind: 'image', x, y, width: w, height: h, color, dataUrl: activeSignatureDataUrl });
     }
-    setSelectedId(null);
+    // Select immediately so the move/resize/rotate/delete handles are
+    // available right away — without this, placing a signature required an
+    // extra click on it before you could do anything further with it.
+    setSelectedId(newId);
   }
 
   function handleBackgroundPointerDown(e: React.PointerEvent) {

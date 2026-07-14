@@ -129,6 +129,7 @@ function drawAnnotation(
         nativeWidth,
         nativeHeight,
         rotation,
+        localRotationDeg: ann.rotation ?? 0,
       });
       break;
     case 'note':
@@ -267,6 +268,7 @@ export async function buildOutputPdf(
             nativeWidth: ref.width,
             nativeHeight: ref.height,
             rotation,
+            localRotationDeg: ann.rotation ?? 0,
           });
         } else {
           drawAnnotation(page, ann, ref.width, ref.height, rotation, helvetica);

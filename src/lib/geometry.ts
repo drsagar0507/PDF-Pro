@@ -134,6 +134,15 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Shared between the editing overlay (AnnotationShape) and the PDF export
+ * pass (pdfDraw's drawDisplayText) so a text annotation's box always
+ * matches what actually gets baked into the PDF. */
+export const TEXT_LINE_HEIGHT_FACTOR = 1.25;
+export function textBoxHeight(fontSize: number, text: string): number {
+  const lines = Math.max(1, text.split('\n').length);
+  return lines * fontSize * TEXT_LINE_HEIGHT_FACTOR;
+}
+
 /** Parse a page-range string like "1-3,5,8-10" into a 0-based, deduped,
  * sorted array of page indices. `total` bounds the range. Empty/invalid
  * input yields all pages. */
