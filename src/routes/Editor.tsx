@@ -36,8 +36,9 @@ import PageToolsPanel from '../components/panels/PageToolsPanel';
 import ProtectPanel from '../components/panels/ProtectPanel';
 import ScannerModal from '../components/scanner/ScannerModal';
 import { buildOutputPdf } from '../lib/exportPdf';
-import { downloadBytes, suggestOutputName } from '../lib/fileIO';
+import { asBufferSource, downloadBytes, suggestOutputName } from '../lib/fileIO';
 import { saveRecentFile } from '../lib/db';
+import { renderThumbnailDataUrl } from '../lib/thumbnail';
 
 const MODES: { id: EditorMode; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
   { id: 'view', icon: Eye, label: 'View' },
@@ -91,12 +92,14 @@ export default function Editor() {
       const bytes = await buildOutputPdf({ sources, pages, annotations, formValues });
       const outName = suggestOutputName(fileName, '');
       downloadBytes(bytes, outName);
+      const thumbnailDataUrl = await renderThumbnailDataUrl(bytes);
       await saveRecentFile({
         id: nanoid(),
         name: outName,
         bytes,
         pageCount: pages.length,
         updatedAt: Date.now(),
+        thumbnailDataUrl,
       });
       toast.success('Saved');
     } catch (err) {
@@ -112,7 +115,7 @@ export default function Editor() {
     setPrinting(true);
     try {
       const bytes = await buildOutputPdf({ sources, pages, annotations, formValues });
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const blob = new Blob([asBufferSource(bytes)], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -186,7 +189,7 @@ export default function Editor() {
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
                   mode === m.id ? 'bg-white text-indigo-700 shadow-sm dark:bg-neutral-700 dark:text-indigo-300' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
@@ -269,9 +272,21 @@ export default function Editor() {
 
       <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
         {showViewerChrome && showThumbRail && <ThumbRail />}
-        {mode === 'organize' && <OrganizeGrid />}
-        {mode === 'pagetools' && <PageToolsPanel />}
-        {mode === 'protect' && <ProtectPanel />}
+        {mode === 'organize' && (
+          <div key="organize" className="animate-fade-in flex min-w-0 flex-1">
+            <OrganizeGrid />
+          </div>
+        )}
+        {mode === 'pagetools' && (
+          <div key="pagetools" className="animate-fade-in flex min-w-0 flex-1">
+            <PageToolsPanel />
+          </div>
+        )}
+        {mode === 'protect' && (
+          <div key="protect" className="animate-fade-in flex min-w-0 flex-1">
+            <ProtectPanel />
+          </div>
+        )}
         {showViewerChrome && (
           <main className="min-w-0 flex-1 overflow-y-auto bg-neutral-200 dark:bg-neutral-950">
             <PageList />

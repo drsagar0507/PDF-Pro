@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PageRef } from '../../lib/types';
 import { useDocStore } from '../../store/useDocStore';
 import { displaySize, pageTotalRotation } from '../../lib/geometry';
 import { getPdfjsDoc } from '../../lib/docCache';
+import { asBufferSource } from '../../lib/fileIO';
 
 interface Props {
   page: PageRef;
@@ -44,14 +45,23 @@ export default function PageThumb({ page, targetWidth = 220 }: Props) {
     };
   }, [source, page.pageIndex, scale, rotation]);
 
-  const imageUrl = useMemo(() => {
-    if (!source || source.kind !== 'image') return null;
-    const blob = new Blob([source.bytes.buffer as ArrayBuffer], {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!source || source.kind !== 'image') {
+      setImageUrl(null);
+      return;
+    }
+    // Create and revoke within the same effect run (not split across a
+    // useMemo + separate cleanup effect) — otherwise React StrictMode's
+    // double-invoked mount/cleanup/mount revokes the URL that's still
+    // being displayed, leaving the <img> pointing at a dead blob: URL.
+    const blob = new Blob([asBufferSource(source.bytes)], {
       type: source.imageFormat === 'png' ? 'image/png' : 'image/jpeg',
     });
-    return URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
   }, [source]);
-  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
 
   if (!source) return null;
 

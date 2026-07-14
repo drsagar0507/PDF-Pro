@@ -5,6 +5,7 @@ import { useUiStore } from '../../store/useUiStore';
 import type { Annotation, PageRef } from '../../lib/types';
 import { displaySize, nativeRectToDisplay, pageTotalRotation } from '../../lib/geometry';
 import { getPdfjsDoc } from '../../lib/docCache';
+import { asBufferSource } from '../../lib/fileIO';
 import FormFieldLayer from './FormFieldLayer';
 import AnnotationShape from './AnnotationShape';
 
@@ -99,14 +100,21 @@ export default function PageView({ page, pageNumber }: Props) {
     };
   }, [source, page.pageIndex, zoom, rotation]);
 
-  const imageUrl = useMemo(() => {
-    if (!source || source.kind !== 'image') return null;
-    const blob = new Blob([source.bytes.buffer as ArrayBuffer], {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!source || source.kind !== 'image') {
+      setImageUrl(null);
+      return;
+    }
+    // See PageThumb.tsx for why creation + cleanup must live in the same
+    // effect (StrictMode double-invoke otherwise revokes a live blob: URL).
+    const blob = new Blob([asBufferSource(source.bytes)], {
       type: source.imageFormat === 'png' ? 'image/png' : 'image/jpeg',
     });
-    return URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
   }, [source]);
-  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
 
   function clientToDisplay(clientX: number, clientY: number) {
     const rect = containerRef.current!.getBoundingClientRect();

@@ -9,10 +9,14 @@ import {
   Upload,
   ImagePlus,
   SwitchCamera,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { warpPerspective, type Point } from '../../lib/perspectiveWarp';
-
-type Filter = 'color' | 'grayscale' | 'bw';
+import { detectDocumentQuad } from '../../lib/documentDetect';
+import { enhanceScan, type ScanFilter } from '../../lib/scanEnhance';
 
 interface ScannedPage {
   id: string;
@@ -31,34 +35,22 @@ const DEFAULT_CORNERS = (): [Point, Point, Point, Point] => [
   { x: 0.08, y: 0.94 },
 ];
 
-function applyFilter(canvas: HTMLCanvasElement, filter: Filter): HTMLCanvasElement {
-  if (filter === 'color') return canvas;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    if (filter === 'grayscale') {
-      d[i] = d[i + 1] = d[i + 2] = gray;
-    } else {
-      const enhanced = (gray - 128) * 1.6 + 128 + 25;
-      const v = enhanced > 150 ? 255 : enhanced < 90 ? 0 : enhanced;
-      d[i] = d[i + 1] = d[i + 2] = v;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return canvas;
-}
+const LOUPE_SIZE = 112;
+const LOUPE_ZOOM = 2.6;
 
 export default function ScannerModal({ onClose, onDone }: Props) {
   const [phase, setPhase] = useState<'camera' | 'adjust'>('camera');
   const [session, setSession] = useState<ScannedPage[]>([]);
   const [captured, setCaptured] = useState<HTMLCanvasElement | null>(null);
   const [corners, setCorners] = useState<[Point, Point, Point, Point]>(DEFAULT_CORNERS());
-  const [filter, setFilter] = useState<Filter>('color');
+  const [autoDetected, setAutoDetected] = useState(false);
+  const [filter, setFilter] = useState<ScanFilter>('color');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [finishing, setFinishing] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const [dragging, setDragging] = useState<{ index: number; clientX: number; clientY: number } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -89,17 +81,25 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     };
   }, [phase, facingMode]);
 
+  function applyDetectedCorners(canvas: HTMLCanvasElement) {
+    const detected = detectDocumentQuad(canvas);
+    setCorners(detected ?? DEFAULT_CORNERS());
+    setAutoDetected(!!detected);
+  }
+
   function capture() {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
-    const maxDim = 2000;
+    setFlash(true);
+    setTimeout(() => setFlash(false), 180);
+    const maxDim = 2200;
     const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
     setCaptured(canvas);
-    setCorners(DEFAULT_CORNERS());
+    applyDetectedCorners(canvas);
     setPhase('adjust');
   }
 
@@ -108,14 +108,14 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     if (!file) return;
     const img = new Image();
     img.onload = () => {
-      const maxDim = 2000;
+      const maxDim = 2200;
       const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.naturalWidth * scale);
       canvas.height = Math.round(img.naturalHeight * scale);
       canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
       setCaptured(canvas);
-      setCorners(DEFAULT_CORNERS());
+      applyDetectedCorners(canvas);
       setPhase('adjust');
     };
     img.src = URL.createObjectURL(file);
@@ -137,13 +137,16 @@ export default function ScannerModal({ onClose, onDone }: Props) {
         next[index] = { x, y };
         return next;
       });
+      setDragging({ index, clientX, clientY });
     }
     update(e.clientX, e.clientY);
+    setAutoDetected(false);
 
     function onMove(ev: PointerEvent) {
       update(ev.clientX, ev.clientY);
     }
     function onUp() {
+      setDragging(null);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     }
@@ -151,23 +154,31 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     window.addEventListener('pointerup', onUp);
   }
 
-  function confirmAdjust() {
+  async function confirmAdjust() {
     if (!captured) return;
-    const px = (c: Point) => ({ x: c.x * captured.width, y: c.y * captured.height });
-    const [tl, tr, br, bl] = corners.map(px);
-    const topW = Math.hypot(tr.x - tl.x, tr.y - tl.y);
-    const bottomW = Math.hypot(br.x - bl.x, br.y - bl.y);
-    const leftH = Math.hypot(bl.x - tl.x, bl.y - tl.y);
-    const rightH = Math.hypot(br.x - tr.x, br.y - tr.y);
-    const outW = Math.round(Math.max(topW, bottomW));
-    const outH = Math.round(Math.max(leftH, rightH));
+    setProcessing(true);
+    try {
+      // Yield a frame so the "Processing…" state paints before the
+      // (synchronous, CPU-bound) warp + enhance pipeline runs.
+      await new Promise((r) => setTimeout(r, 30));
+      const px = (c: Point) => ({ x: c.x * captured.width, y: c.y * captured.height });
+      const [tl, tr, br, bl] = corners.map(px);
+      const topW = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+      const bottomW = Math.hypot(br.x - bl.x, br.y - bl.y);
+      const leftH = Math.hypot(bl.x - tl.x, bl.y - tl.y);
+      const rightH = Math.hypot(br.x - tr.x, br.y - tr.y);
+      const outW = Math.round(Math.max(topW, bottomW));
+      const outH = Math.round(Math.max(leftH, rightH));
 
-    const warped = warpPerspective(captured, [tl, tr, br, bl], Math.max(outW, 50), Math.max(outH, 50));
-    applyFilter(warped, filter);
+      const warped = warpPerspective(captured, [tl, tr, br, bl], Math.max(outW, 50), Math.max(outH, 50));
+      enhanceScan(warped, filter);
 
-    setSession((s) => [...s, { id: crypto.randomUUID(), canvas: warped }]);
-    setCaptured(null);
-    setPhase('camera');
+      setSession((s) => [...s, { id: crypto.randomUUID(), canvas: warped }]);
+      setCaptured(null);
+      setPhase('camera');
+    } finally {
+      setProcessing(false);
+    }
   }
 
   function retake() {
@@ -177,6 +188,16 @@ export default function ScannerModal({ onClose, onDone }: Props) {
 
   function removePage(id: string) {
     setSession((s) => s.filter((p) => p.id !== id));
+  }
+
+  function movePage(index: number, delta: number) {
+    setSession((s) => {
+      const next = [...s];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return s;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   async function finish() {
@@ -197,6 +218,31 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     } finally {
       setFinishing(false);
     }
+  }
+
+  // Loupe geometry: reproject the dragged corner's fractional position onto
+  // the displayed image's rendered pixel box so the zoomed preview lines up
+  // exactly with what's under the finger, even though the finger itself
+  // covers that spot.
+  let loupeStyle: React.CSSProperties | null = null;
+  let loupeBg: React.CSSProperties | null = null;
+  if (dragging && imgFrameRef.current) {
+    const rect = imgFrameRef.current.getBoundingClientRect();
+    const c = corners[dragging.index];
+    const px = c.x * rect.width;
+    const py = c.y * rect.height;
+    const loupeTop = py - LOUPE_SIZE * 1.3 < 0 ? py + LOUPE_SIZE * 0.8 : py - LOUPE_SIZE * 1.3;
+    loupeStyle = {
+      left: Math.min(Math.max(px - LOUPE_SIZE / 2, 4), rect.width - LOUPE_SIZE - 4),
+      top: loupeTop,
+      width: LOUPE_SIZE,
+      height: LOUPE_SIZE,
+    };
+    loupeBg = {
+      backgroundImage: captured ? `url(${captured.toDataURL('image/jpeg', 0.7)})` : undefined,
+      backgroundSize: `${rect.width * LOUPE_ZOOM}px ${rect.height * LOUPE_ZOOM}px`,
+      backgroundPosition: `${-(px * LOUPE_ZOOM - LOUPE_SIZE / 2)}px ${-(py * LOUPE_ZOOM - LOUPE_SIZE / 2)}px`,
+    };
   }
 
   return (
@@ -220,6 +266,9 @@ export default function ScannerModal({ onClose, onDone }: Props) {
             ) : (
               <video ref={videoRef} autoPlay playsInline muted className="max-h-full max-w-full" />
             )}
+            <div
+              className={`pointer-events-none absolute inset-0 bg-white transition-opacity duration-150 ${flash ? 'opacity-80' : 'opacity-0'}`}
+            />
           </>
         )}
 
@@ -231,22 +280,42 @@ export default function ScannerModal({ onClose, onDone }: Props) {
               className="max-h-[70vh] max-w-full"
               draggable={false}
             />
-            <svg className="pointer-events-none absolute inset-0 h-full w-full">
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            >
               <polygon
-                points={corners.map((c) => `${c.x * 100}%,${c.y * 100}%`).join(' ')}
-                fill="rgba(99,102,241,0.25)"
+                points={corners.map((c) => `${c.x * 100},${c.y * 100}`).join(' ')}
+                fill="rgba(99,102,241,0.22)"
                 stroke="#6366F1"
                 strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
               />
             </svg>
             {corners.map((c, i) => (
               <div
                 key={i}
                 onPointerDown={(e) => startCornerDrag(i, e)}
-                className="absolute h-7 w-7 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none rounded-full border-2 border-white bg-indigo-500 shadow-lg active:cursor-grabbing"
+                className="absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none rounded-full border-2 border-white bg-indigo-500 shadow-lg active:scale-110 active:cursor-grabbing"
                 style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
               />
             ))}
+            {loupeStyle && (
+              <div
+                className="pointer-events-none absolute overflow-hidden rounded-full border-2 border-white shadow-2xl"
+                style={loupeStyle}
+              >
+                <div className="h-full w-full" style={loupeBg ?? undefined} />
+                <div className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-indigo-400" />
+                <div className="absolute left-1/2 top-1/2 h-px w-4 -translate-x-1/2 -translate-y-1/2 bg-indigo-400" />
+              </div>
+            )}
+            {processing && (
+              <div className="absolute inset-0 flex items-center justify-center rounded bg-black/50">
+                <Loader2 size={28} className="animate-spin text-white" />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -255,19 +324,36 @@ export default function ScannerModal({ onClose, onDone }: Props) {
         <div className="flex flex-col items-center gap-3 px-4 pb-6 pt-3">
           {session.length > 0 && (
             <div className="flex w-full gap-2 overflow-x-auto pb-1">
-              {session.map((p) => (
-                <div key={p.id} className="relative flex-none">
+              {session.map((p, i) => (
+                <div key={p.id} className="group relative flex-none">
                   <img
                     src={p.canvas.toDataURL('image/jpeg', 0.6)}
                     alt=""
                     className="h-16 w-12 rounded border border-white/30 object-cover"
                   />
+                  <span className="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 text-[9px] text-white">{i + 1}</span>
                   <button
                     onClick={() => removePage(p.id)}
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white"
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
                   >
-                    <Trash2 size={9} />
+                    <Trash2 size={10} />
                   </button>
+                  {i > 0 && (
+                    <button
+                      onClick={() => movePage(i, -1)}
+                      className="absolute -bottom-1.5 -left-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
+                    >
+                      <ChevronLeft size={11} />
+                    </button>
+                  )}
+                  {i < session.length - 1 && (
+                    <button
+                      onClick={() => movePage(i, 1)}
+                      className="absolute -bottom-1.5 -right-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
+                    >
+                      <ChevronRight size={11} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -286,7 +372,7 @@ export default function ScannerModal({ onClose, onDone }: Props) {
             <button
               onClick={capture}
               disabled={!!cameraError}
-              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 disabled:opacity-30"
+              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 transition active:scale-95 disabled:opacity-30"
             >
               <div className="h-12 w-12 rounded-full bg-white" />
             </button>
@@ -304,9 +390,9 @@ export default function ScannerModal({ onClose, onDone }: Props) {
             <button
               onClick={finish}
               disabled={finishing}
-              className="flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-600/30 disabled:opacity-60"
             >
-              <ImagePlus size={15} />
+              {finishing ? <Loader2 size={15} className="animate-spin" /> : <ImagePlus size={15} />}
               {finishing ? 'Processing…' : `Done — create PDF (${session.length})`}
             </button>
           )}
@@ -315,12 +401,17 @@ export default function ScannerModal({ onClose, onDone }: Props) {
 
       {phase === 'adjust' && (
         <div className="flex flex-col items-center gap-3 px-4 pb-6 pt-3">
+          {autoDetected && (
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
+              <Sparkles size={12} /> Edges auto-detected — fine-tune if needed
+            </div>
+          )}
           <div className="flex gap-2">
-            {(['color', 'grayscale', 'bw'] as Filter[]).map((f) => (
+            {(['color', 'grayscale', 'bw'] as ScanFilter[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize ${
+                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
                   filter === f ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/80'
                 }`}
               >
@@ -332,11 +423,16 @@ export default function ScannerModal({ onClose, onDone }: Props) {
             <button onClick={retake} className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm text-white">
               <RotateCcw size={15} /> Retake
             </button>
-            <button onClick={confirmAdjust} className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white">
-              <Check size={15} /> Use this scan
+            <button
+              onClick={confirmAdjust}
+              disabled={processing}
+              className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-600/30 disabled:opacity-60"
+            >
+              {processing ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+              Use this scan
             </button>
           </div>
-          <p className="text-center text-xs text-white/50">Drag the corners to match the edges of the page</p>
+          {!autoDetected && <p className="text-center text-xs text-white/50">Drag the corners to match the edges of the page</p>}
         </div>
       )}
     </div>

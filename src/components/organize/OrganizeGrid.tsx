@@ -15,6 +15,7 @@ import PageThumb from '../viewer/PageThumb';
 import { buildOutputPdf } from '../../lib/exportPdf';
 import { downloadBytes, suggestOutputName } from '../../lib/fileIO';
 import { saveRecentFile } from '../../lib/db';
+import { renderThumbnailDataUrl } from '../../lib/thumbnail';
 import { nanoid } from 'nanoid';
 
 export default function OrganizeGrid() {
@@ -96,12 +97,14 @@ export default function OrganizeGrid() {
     try {
       const bytes = await buildOutputPdf({ sources, pages, annotations, formValues });
       downloadBytes(bytes, suggestOutputName(fileName, '-organized'));
+      const thumbnailDataUrl = await renderThumbnailDataUrl(bytes);
       await saveRecentFile({
         id: nanoid(),
         name: suggestOutputName(fileName, '-organized'),
         bytes,
         pageCount: pages.length,
         updatedAt: Date.now(),
+        thumbnailDataUrl,
       });
       toast.success('Saved');
     } catch (err) {

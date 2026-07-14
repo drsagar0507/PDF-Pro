@@ -3,6 +3,20 @@ export async function readFileBytes(file: File): Promise<Uint8Array> {
   return new Uint8Array(buf);
 }
 
+/**
+ * TypeScript's DOM lib types `Uint8Array` as generic over its backing
+ * buffer (`ArrayBufferLike`, which includes `SharedArrayBuffer`), so
+ * `Blob`/`crypto.subtle` APIs — typed to require a plain `ArrayBuffer` —
+ * reject a bare `Uint8Array` at the type level even though every browser
+ * accepts it fine at runtime. Every byte array in this app originates from
+ * `file.arrayBuffer()`, `canvas.toBlob()`, or a fresh allocation — never a
+ * SharedArrayBuffer — so this assertion is safe; it exists to satisfy the
+ * type checker, not to change behavior.
+ */
+export function asBufferSource(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return bytes as Uint8Array<ArrayBuffer>;
+}
+
 export function isPdfFile(file: File): boolean {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 }
@@ -21,7 +35,7 @@ export function imageFormatOf(file: File): 'png' | 'jpg' {
 /** Natural pixel size of an image blob. */
 export function getImageSize(bytes: Uint8Array, format: 'png' | 'jpg'): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
-    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: format === 'png' ? 'image/png' : 'image/jpeg' });
+    const blob = new Blob([asBufferSource(bytes)], { type: format === 'png' ? 'image/png' : 'image/jpeg' });
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = () => {
@@ -41,7 +55,7 @@ export function getImageSize(bytes: Uint8Array, format: 'png' | 'jpg'): Promise<
 export const PX_TO_PT = 72 / 96;
 
 export function downloadBytes(bytes: Uint8Array, filename: string, mime = 'application/pdf'): void {
-  const blob = new Blob([bytes.buffer as ArrayBuffer], { type: mime });
+  const blob = new Blob([asBufferSource(bytes)], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

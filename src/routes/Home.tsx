@@ -21,6 +21,7 @@ import { useUiStore } from '../store/useUiStore';
 import type { EditorMode } from '../lib/types';
 import { listRecentFiles, deleteRecentFile } from '../lib/db';
 import type { RecentFile } from '../lib/types';
+import { asBufferSource } from '../lib/fileIO';
 import ScannerModal from '../components/scanner/ScannerModal';
 
 interface Tool {
@@ -202,7 +203,7 @@ export default function Home() {
   }
 
   async function openRecent(file: RecentFile) {
-    const asFile = new File([file.bytes.buffer as ArrayBuffer], file.name, { type: 'application/pdf' });
+    const asFile = new File([asBufferSource(file.bytes)], file.name, { type: 'application/pdf' });
     await openFiles([asFile], 'view');
   }
 
@@ -214,8 +215,8 @@ export default function Home() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-6xl flex-col px-6 py-10 sm:px-10">
-      <header className="mb-10 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20">
+      <header className="animate-fade-in mb-10 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10">
           <FileText size={22} />
         </div>
         <div>
@@ -233,16 +234,17 @@ export default function Home() {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`mb-10 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-colors ${
+        className={`animate-fade-in mb-10 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-all duration-200 ${
           dragOver
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
-            : 'border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-900'
+            ? 'scale-[1.01] border-indigo-500 bg-indigo-50 shadow-lg shadow-indigo-500/10 dark:bg-indigo-950/30'
+            : 'border-neutral-300 bg-white hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600'
         }`}
+        style={{ animationDelay: '40ms' }}
       >
         {loadingToolId === 'dropzone' ? (
           <Loader2 className="mb-3 animate-spin text-indigo-500" size={32} />
         ) : (
-          <FileUp className="mb-3 text-neutral-400" size={32} />
+          <FileUp className={`mb-3 text-neutral-400 transition-transform duration-200 ${dragOver ? '-translate-y-1 text-indigo-500' : ''}`} size={32} />
         )}
         <p className="mb-1 font-medium">Drop a PDF or image here</p>
         <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">or choose a tool below</p>
@@ -257,96 +259,87 @@ export default function Home() {
         />
         <button
           onClick={() => inputRefs.current['open']?.click()}
-          className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
+          className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-indigo-600/20 transition hover:-translate-y-px hover:bg-indigo-700 hover:shadow-md active:translate-y-0"
         >
           Browse files
         </button>
       </div>
 
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <h2 className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400" style={{ animationDelay: '80ms' }}>
         All tools
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <button
+        <ToolCard
+          label="Scan Document"
+          description="Use your camera to scan pages into a PDF"
+          icon={ScanLine}
+          accent="from-orange-500 to-red-500"
+          delay={100}
           onClick={() => setScannerOpen(true)}
-          className="group relative flex flex-col items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white">
-            <ScanLine size={18} />
-          </div>
-          <div>
-            <div className="text-sm font-medium">Scan Document</div>
-            <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-              Use your camera to scan pages into a PDF
-            </div>
-          </div>
-        </button>
-        {TOOLS.map((tool) => {
-          const Icon = tool.icon;
-          return (
-            <button
-              key={tool.id}
-              onClick={() => inputRefs.current[tool.id]?.click()}
-              className="group relative flex flex-col items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
-            >
-              <input
-                ref={(el) => {
-                  inputRefs.current[tool.id] = el;
-                }}
-                type="file"
-                accept={tool.accept}
-                multiple={tool.multiple}
-                className="hidden"
-                onChange={(e) => handleToolFiles(tool, e.target.files)}
-              />
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white ${tool.accent}`}
-              >
-                {loadingToolId === tool.id ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Icon size={18} />
-                )}
-              </div>
-              <div>
-                <div className="text-sm font-medium">{tool.label}</div>
-                <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  {tool.description}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+        />
+        {TOOLS.map((tool, i) => (
+          <ToolCard
+            key={tool.id}
+            label={tool.label}
+            description={tool.description}
+            icon={tool.icon}
+            accent={tool.accent}
+            delay={120 + i * 20}
+            loading={loadingToolId === tool.id}
+            onClick={() => inputRefs.current[tool.id]?.click()}
+          >
+            <input
+              ref={(el) => {
+                inputRefs.current[tool.id] = el;
+              }}
+              type="file"
+              accept={tool.accept}
+              multiple={tool.multiple}
+              className="hidden"
+              onChange={(e) => handleToolFiles(tool, e.target.files)}
+            />
+          </ToolCard>
+        ))}
       </div>
 
       {recents.length > 0 && (
-        <div className="mt-12">
+        <div className="mt-12 animate-fade-in" style={{ animationDelay: '80ms' }}>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Recent files
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {recents.map((file) => (
               <button
                 key={file.id}
                 onClick={() => openRecent(file)}
-                className="group flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3 text-left transition hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+                className="group relative flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
               >
-                <div className="flex h-10 w-8 flex-none items-center justify-center rounded bg-neutral-100 text-neutral-400 dark:bg-neutral-800">
-                  <FileText size={16} />
+                <div className="flex aspect-[3/4] items-center justify-center overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  {file.thumbnailDataUrl ? (
+                    <img
+                      src={file.thumbnailDataUrl}
+                      alt=""
+                      className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <FileText size={28} className="text-neutral-300 dark:text-neutral-600" />
+                  )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{file.name}</div>
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {file.pageCount} page{file.pageCount === 1 ? '' : 's'}
+                <div className="flex items-start gap-2 p-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-medium">{file.name}</div>
+                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {file.pageCount} page{file.pageCount === 1 ? '' : 's'}
+                    </div>
                   </div>
                 </div>
                 <span
                   role="button"
                   tabIndex={0}
                   onClick={(e) => removeRecent(file.id, e)}
-                  className="flex-none rounded p-1 text-neutral-300 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-600 group-hover:opacity-100 dark:hover:bg-neutral-800"
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/70 group-hover:opacity-100"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={12} />
                 </span>
               </button>
             ))}
@@ -368,5 +361,44 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+function ToolCard({
+  label,
+  description,
+  icon: Icon,
+  accent,
+  delay,
+  loading,
+  onClick,
+  children,
+}: {
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  accent: string;
+  delay: number;
+  loading?: boolean;
+  onClick: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ animationDelay: `${delay}ms` }}
+      className="animate-fade-in group relative flex flex-col items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg active:translate-y-0 active:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+    >
+      {children}
+      <div
+        className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm transition-transform duration-200 group-hover:scale-110 ${accent}`}
+      >
+        {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
+      </div>
+      <div>
+        <div className="text-sm font-medium">{label}</div>
+        <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">{description}</div>
+      </div>
+    </button>
   );
 }

@@ -48,3 +48,23 @@ body {
     @apply w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-indigo-500 dark:border-neutral-700 dark:bg-neutral-800;
   }
 }
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
+}

@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import type { PageRef, SourceDoc } from './types';
 import { pageTotalRotation } from './geometry';
 import { getPdfjsDoc } from './docCache';
+import { asBufferSource } from './fileIO';
 
 export type CompressLevel = 'low' | 'medium' | 'high';
 
@@ -47,7 +48,7 @@ export async function compressPdf(
       canvas.width = pxWidth;
       canvas.height = pxHeight;
       const ctx = canvas.getContext('2d')!;
-      const bitmap = await createImageBitmap(new Blob([source.bytes.buffer as ArrayBuffer]));
+      const bitmap = await createImageBitmap(new Blob([asBufferSource(source.bytes)]));
       // Draw at the page's own (unrotated) point-based size, scaled down —
       // not the source photo's raw pixel count — then let the rotate
       // transform reorient it to fill the (possibly swapped) canvas.

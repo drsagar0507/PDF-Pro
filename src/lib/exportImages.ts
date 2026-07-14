@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import type { PageRef, SourceDoc } from './types';
 import { pageTotalRotation } from './geometry';
 import { getPdfjsDoc } from './docCache';
+import { asBufferSource } from './fileIO';
 
 export interface ExportImagesOptions {
   format: 'png' | 'jpeg';
@@ -16,7 +17,7 @@ async function renderPageToBlob(
   opts: ExportImagesOptions,
 ): Promise<Blob> {
   if (source.kind === 'image') {
-    return new Blob([source.bytes.buffer as ArrayBuffer], {
+    return new Blob([asBufferSource(source.bytes)], {
       type: source.imageFormat === 'png' ? 'image/png' : 'image/jpeg',
     });
   }

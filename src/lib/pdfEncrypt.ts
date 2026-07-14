@@ -1,6 +1,12 @@
 import { PDFDocument, PDFName, PDFRawStream, PDFHexString, PDFBool, PDFNumber } from 'pdf-lib';
 import { pdfjsLib } from './pdfjsSetup';
 
+/** See fileIO.ts's asBufferSource for why this cast is needed and safe —
+ * kept local here so this crypto module stays self-contained. */
+function asBufferSource(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return bytes as Uint8Array<ArrayBuffer>;
+}
+
 /**
  * Password protection using the PDF 2.0 (ISO 32000-2) Standard Security
  * Handler, revision 6, AES-256 — the same scheme modern Acrobat uses for
@@ -53,7 +59,7 @@ function preparePassword(password: string): Uint8Array {
 }
 
 async function sha(bytes: Uint8Array, bits: 256 | 384 | 512): Promise<Uint8Array> {
-  const digest = await crypto.subtle.digest(`SHA-${bits}`, bytes.buffer as ArrayBuffer);
+  const digest = await crypto.subtle.digest(`SHA-${bits}`, asBufferSource(bytes));
   return new Uint8Array(digest);
 }
 
@@ -63,8 +69,8 @@ async function sha(bytes: Uint8Array, bits: 256 | 384 | 512): Promise<Uint8Array
  * for single-block (16-byte) inputs, where CBC with a zero IV is
  * equivalent to ECB. */
 async function aesCbcNoPad(key: Uint8Array, iv: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
-  const cryptoKey = await crypto.subtle.importKey('raw', key.buffer as ArrayBuffer, { name: 'AES-CBC' }, false, ['encrypt']);
-  const out = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
+  const cryptoKey = await crypto.subtle.importKey('raw', asBufferSource(key), { name: 'AES-CBC' }, false, ['encrypt']);
+  const out = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: asBufferSource(iv) }, cryptoKey, asBufferSource(data));
   return new Uint8Array(out).slice(0, data.length);
 }
 
@@ -72,8 +78,8 @@ async function aesCbcNoPad(key: Uint8Array, iv: Uint8Array, data: Uint8Array): P
  * — the normal PDF string/stream encryption convention. */
 async function aesCbcEncrypt(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
   const iv = randomBytes(16);
-  const cryptoKey = await crypto.subtle.importKey('raw', key.buffer as ArrayBuffer, { name: 'AES-CBC' }, false, ['encrypt']);
-  const out = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
+  const cryptoKey = await crypto.subtle.importKey('raw', asBufferSource(key), { name: 'AES-CBC' }, false, ['encrypt']);
+  const out = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: asBufferSource(iv) }, cryptoKey, asBufferSource(data));
   return concat(iv, new Uint8Array(out));
 }
 
