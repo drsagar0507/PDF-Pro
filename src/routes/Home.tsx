@@ -227,18 +227,32 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-6xl flex-col px-6 py-10 sm:px-10">
-      <header className="animate-fade-in mb-10 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10">
-          <FileText size={22} />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">PDF Pro</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Edit, sign, and organize PDFs — 100% offline, nothing leaves your device.
-          </p>
-        </div>
-      </header>
+    <div className="relative min-h-full overflow-hidden">
+      {/* Ambient background wash — a restrained mesh gradient instead of
+       * flat gray, the difference between "template" and "product." */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-indigo-400/25 to-violet-400/10 blur-3xl dark:from-indigo-500/15 dark:to-violet-500/10" />
+        <div className="absolute -right-32 top-20 h-[26rem] w-[26rem] rounded-full bg-gradient-to-bl from-fuchsia-300/15 to-transparent blur-3xl dark:from-fuchsia-500/10" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-full max-w-6xl flex-col px-6 py-10 sm:px-10">
+        <header className="animate-fade-in mb-12 flex items-center gap-4">
+          <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/20">
+            <FileText size={26} strokeWidth={2.25} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
+              PDF Pro
+            </h1>
+            <p className="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">
+              Edit, sign, and organize PDFs — entirely on your device.
+            </p>
+          </div>
+          <span className="ml-auto hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 sm:inline-flex dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            100% private — nothing uploaded
+          </span>
+        </header>
 
       <main>
       <div
@@ -248,20 +262,24 @@ export default function Home() {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`animate-fade-in mb-10 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-all duration-200 ${
+        className={`animate-fade-in group relative mb-10 flex flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 ${
           dragOver
             ? 'scale-[1.01] border-indigo-500 bg-indigo-50 shadow-lg shadow-indigo-500/10 dark:bg-indigo-950/30'
-            : 'border-neutral-300 bg-white hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600'
+            : 'border-neutral-300 bg-white/70 backdrop-blur-sm hover:border-indigo-300 hover:bg-white hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900/70 dark:hover:border-neutral-600 dark:hover:bg-neutral-900'
         }`}
         style={{ animationDelay: '40ms' }}
       >
-        {loadingToolId === 'dropzone' ? (
-          <Loader2 className="mb-3 animate-spin text-indigo-500" size={32} />
-        ) : (
-          <FileUp className={`mb-3 text-neutral-400 transition-transform duration-200 ${dragOver ? '-translate-y-1 text-indigo-500' : ''}`} size={32} />
-        )}
-        <p className="mb-1 font-medium">Drop a PDF or image here</p>
-        <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">or choose a tool below</p>
+        <div
+          className={`mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 transition-transform duration-200 ${dragOver ? '-translate-y-1 scale-105' : 'group-hover:-translate-y-0.5'}`}
+        >
+          {loadingToolId === 'dropzone' ? (
+            <Loader2 className="animate-spin text-indigo-500" size={26} />
+          ) : (
+            <FileUp className={`text-indigo-500 transition-colors ${dragOver ? 'text-indigo-600' : ''}`} size={26} />
+          )}
+        </div>
+        <p className="mb-1 text-base font-medium text-neutral-900 dark:text-white">Drop a PDF or image here</p>
+        <p className="mb-5 text-sm text-neutral-600 dark:text-neutral-400">or choose a tool below</p>
         <input
           ref={(el) => {
             inputRefs.current['open'] = el;
@@ -271,10 +289,7 @@ export default function Home() {
           className="hidden"
           onChange={(e) => handleToolFiles(TOOLS[0], e.target.files)}
         />
-        <button
-          onClick={() => inputRefs.current['open']?.click()}
-          className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-indigo-600/20 transition hover:-translate-y-px hover:bg-indigo-700 hover:shadow-md active:translate-y-0"
-        >
+        <button onClick={() => inputRefs.current['open']?.click()} className="btn-primary px-5 py-2.5">
           Browse files
         </button>
       </div>
@@ -384,6 +399,7 @@ export default function Home() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
@@ -411,17 +427,20 @@ function ToolCard({
     <button
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
-      className="animate-fade-in group relative flex flex-col items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg active:translate-y-0 active:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+      className="animate-fade-in card-surface group relative flex flex-col items-start gap-3 overflow-hidden p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg active:translate-y-0 active:shadow-sm dark:hover:border-neutral-700"
     >
       {children}
       <div
-        className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm transition-transform duration-200 group-hover:scale-110 ${accent}`}
+        className={`absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20 ${accent}`}
+      />
+      <div
+        className={`relative flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm transition-transform duration-200 group-hover:scale-110 ${accent}`}
       >
         {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
       </div>
-      <div>
-        <div className="text-sm font-medium">{label}</div>
-        <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">{description}</div>
+      <div className="relative">
+        <div className="text-sm font-medium text-neutral-900 dark:text-white">{label}</div>
+        <div className="mt-0.5 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">{description}</div>
       </div>
     </button>
   );

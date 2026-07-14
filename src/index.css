@@ -1,9 +1,24 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 @import "@fontsource/dancing-script/400.css";
 @import "@fontsource/dancing-script/700.css";
 @import "@fontsource/caveat/400.css";
 @import "@fontsource/caveat/700.css";
 @import "@fontsource/great-vibes/400.css";
+
+@theme {
+  --font-sans: 'InterVariable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Softer, deeper, more layered shadows than Tailwind's defaults — this
+   * single override reaches every existing shadow-sm/md/lg/xl usage across
+   * the app, which is most of the "elevation" already in place. */
+  --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.03);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px -1px rgb(0 0 0 / 0.03);
+  --shadow-md: 0 2px 6px -2px rgb(0 0 0 / 0.06), 0 6px 16px -4px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 8px 24px -6px rgb(0 0 0 / 0.10), 0 4px 10px -6px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 50px -12px rgb(0 0 0 / 0.16), 0 8px 20px -8px rgb(0 0 0 / 0.08);
+  --shadow-2xl: 0 28px 70px -16px rgb(0 0 0 / 0.22);
+}
 
 :root {
   color-scheme: light dark;
@@ -16,12 +31,22 @@ html, body, #root {
 }
 
 body {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01', 'cv01';
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 * {
   box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar {
@@ -45,7 +70,19 @@ body {
 
 @layer components {
   .input {
-    @apply w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-indigo-500 dark:border-neutral-700 dark:bg-neutral-800;
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-shadow duration-150 placeholder:text-neutral-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-600/20 transition-all duration-150 hover:from-indigo-500 hover:to-indigo-700 hover:shadow-md hover:shadow-indigo-600/25 active:scale-[0.98] active:shadow-sm disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-xs transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700;
+  }
+
+  .card-surface {
+    @apply rounded-xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900;
   }
 }
 
@@ -63,8 +100,22 @@ body {
   animation: fade-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-scale-in {
+  animation: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in {
+  .animate-fade-in, .animate-scale-in {
     animation: none;
   }
 }

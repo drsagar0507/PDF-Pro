@@ -131,7 +131,7 @@ export default function Editor() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex flex-none items-center gap-1 border-b border-neutral-200 bg-white px-2 py-2 sm:gap-2 sm:px-3 dark:border-neutral-800 dark:bg-neutral-900">
+      <header className="flex flex-none items-center gap-1 border-b border-neutral-200/80 bg-white/85 px-2 py-2 shadow-xs backdrop-blur-md sm:gap-2 sm:px-3 dark:border-neutral-800/80 dark:bg-neutral-900/85">
         <button onClick={handleHome} className="rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Home">
           <Home size={18} />
         </button>
@@ -182,15 +182,17 @@ export default function Editor() {
         )}
 
         {/* Desktop mode nav */}
-        <nav className="mx-auto hidden items-center gap-0.5 rounded-lg bg-neutral-100 p-1 sm:flex dark:bg-neutral-800">
+        <nav className="mx-auto hidden items-center gap-0.5 rounded-xl bg-neutral-100/80 p-1 sm:flex dark:bg-neutral-800/60">
           {MODES.map((m) => {
             const Icon = m.icon;
             return (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
-                  mode === m.id ? 'bg-white text-indigo-700 shadow-sm dark:bg-neutral-700 dark:text-indigo-300' : 'text-neutral-600 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                className={`relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
+                  mode === m.id
+                    ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5 dark:bg-neutral-700 dark:text-indigo-300 dark:ring-white/5'
+                    : 'text-neutral-600 hover:bg-white/60 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/5 dark:hover:text-neutral-200'
                 }`}
               >
                 <Icon size={14} />
@@ -259,7 +261,7 @@ export default function Editor() {
             onClick={handleSave}
             disabled={busy || pages.length === 0}
             aria-label="Save"
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50 sm:px-3.5"
+            className="btn-primary px-2.5 py-1.5 sm:px-3.5"
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
             <span className="hidden sm:inline">Save</span>
@@ -291,7 +293,7 @@ export default function Editor() {
         )}
         {showViewerChrome && (
           <div
-            className="min-w-0 flex-1 overflow-y-auto bg-neutral-200 dark:bg-neutral-950"
+            className="min-w-0 flex-1 overflow-y-auto bg-gradient-to-b from-neutral-100 to-neutral-200 dark:from-neutral-950 dark:to-black"
             tabIndex={0}
             role="region"
             aria-label="Document pages"
@@ -303,19 +305,21 @@ export default function Editor() {
 
       {/* Mobile bottom tab bar for mode switching */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200 bg-white sm:hidden dark:border-neutral-800 dark:bg-neutral-900"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200/80 bg-white/90 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur-md sm:hidden dark:border-neutral-800/80 dark:bg-neutral-900/90"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {MODES.map((m) => {
           const Icon = m.icon;
+          const active = mode === m.id;
           return (
             <button
               key={m.id}
               onClick={() => setMode(m.id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                mode === m.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-600 dark:text-neutral-400'
+              className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                active ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
+              {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
               <Icon size={19} />
               {m.label}
             </button>

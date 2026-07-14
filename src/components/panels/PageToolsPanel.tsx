@@ -261,11 +261,7 @@ export default function PageToolsPanel() {
             </>
           )}
 
-          <button
-            onClick={apply}
-            disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
-          >
+          <button onClick={apply} disabled={busy} className="btn-primary w-full py-2.5">
             {busy && <Loader2 size={14} className="animate-spin" />}
             {tab === 'images' ? 'Export & download' : tab === 'compress' ? 'Compress & download' : 'Apply & download'}
           </button>

@@ -117,7 +117,7 @@ export default function OrganizeGrid() {
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-2 py-2 sm:px-4 sm:py-2.5 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex items-center gap-2 border-b border-neutral-200/80 bg-white/90 px-2 py-2 shadow-xs backdrop-blur-sm sm:px-4 sm:py-2.5 dark:border-neutral-800/80 dark:bg-neutral-900/90">
         <input
           ref={fileInputRef}
           type="file"
@@ -151,17 +151,13 @@ export default function OrganizeGrid() {
           <ToolbarButton icon={Scissors} label="Split into files" disabled={!hasSelection || busy} onClick={splitEachSelectedAsOwnFile} />
         </div>
         <div className="flex-none">
-          <button
-            onClick={saveWholeDocument}
-            disabled={busy || pages.length === 0}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50 sm:px-4"
-          >
+          <button onClick={saveWholeDocument} disabled={busy || pages.length === 0} className="btn-primary px-3 py-1.5 sm:px-4">
             Save document
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+      <div className="flex-1 overflow-y-auto bg-neutral-50 p-3 dark:bg-neutral-950 sm:p-5">
         {pages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-neutral-400">
             Add files to get started
@@ -184,7 +180,7 @@ export default function OrganizeGrid() {
                     setDragIndex(null);
                     setOverIndex(null);
                   }}
-                  className={`group relative min-w-0 cursor-grab rounded-lg border-2 p-1.5 transition active:cursor-grabbing ${
+                  className={`group relative min-w-0 cursor-grab rounded-xl border-2 bg-white p-1.5 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing dark:bg-neutral-900 ${
                     selected
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
                       : overIndex === i

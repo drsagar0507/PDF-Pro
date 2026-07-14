@@ -274,7 +274,7 @@ export default function PageView({ page, pageNumber }: Props) {
     <div
       ref={rootRef}
       data-page-number={pageNumber}
-      className="relative mx-auto mb-4 bg-white shadow-md dark:shadow-black/40"
+      className="relative mx-auto mb-5 bg-white shadow-lg ring-1 ring-black/5 dark:shadow-2xl dark:shadow-black/60 dark:ring-white/10"
       style={{ width: cssWidth, height: cssHeight }}
       onMouseEnter={() => setCurrentPageIndex(pageNumber - 1)}
     >
