@@ -51,7 +51,7 @@ export default function ProtectPanel() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-5">
+    <div className="min-w-0 flex-1 overflow-y-auto p-5">
       <div className="mx-auto max-w-sm space-y-4">
         <div className="flex items-start gap-2 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
           <ShieldCheck size={28} className="flex-none" />

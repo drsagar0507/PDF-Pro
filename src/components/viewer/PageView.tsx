@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { useDocStore } from '../../store/useDocStore';
 import { useUiStore } from '../../store/useUiStore';
 import type { Annotation, PageRef } from '../../lib/types';
-import { displaySize, pageTotalRotation } from '../../lib/geometry';
+import { displaySize, nativeRectToDisplay, pageTotalRotation } from '../../lib/geometry';
 import { getPdfjsDoc } from '../../lib/docCache';
 import FormFieldLayer from './FormFieldLayer';
 import AnnotationShape from './AnnotationShape';
@@ -36,6 +36,7 @@ export default function PageView({ page, pageNumber }: Props) {
   const annotateColor = useUiStore((s) => s.annotateColor);
   const fillSignTool = useUiStore((s) => s.fillSignTool);
   const activeSignatureDataUrl = useUiStore((s) => s.activeSignatureDataUrl);
+  const searchHighlight = useUiStore((s) => s.searchHighlight);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +44,14 @@ export default function PageView({ page, pageNumber }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [inkPreview, setInkPreview] = useState<{ x: number; y: number }[] | null>(null);
+  const [showSearchFlash, setShowSearchFlash] = useState(false);
+
+  useEffect(() => {
+    if (searchHighlight?.pageId !== page.id) return;
+    setShowSearchFlash(true);
+    const t = setTimeout(() => setShowSearchFlash(false), 2200);
+    return () => clearTimeout(t);
+  }, [searchHighlight, page.id]);
 
   const rotation = pageTotalRotation(page);
   const dispSize = useMemo(() => displaySize(page.width, page.height, rotation), [page.width, page.height, rotation]);
@@ -266,6 +275,22 @@ export default function PageView({ page, pageNumber }: Props) {
       {mode === 'fillsign' && source.kind === 'pdf' && (
         <FormFieldLayer page={page} sourceBytes={source.bytes} zoom={zoom} />
       )}
+
+      {showSearchFlash && searchHighlight && (() => {
+        const r = searchHighlight.rect;
+        const box = nativeRectToDisplay(r.x0, r.y0, r.x1, r.y1, page.width, page.height, rotation);
+        return (
+          <div
+            className="pointer-events-none absolute animate-pulse rounded-sm bg-amber-400/60 ring-2 ring-amber-500"
+            style={{
+              left: box.x * zoom - 3,
+              top: box.y * zoom - 3,
+              width: box.width * zoom + 6,
+              height: box.height * zoom + 6,
+            }}
+          />
+        );
+      })()}
 
       <div
         ref={containerRef}

@@ -8,13 +8,17 @@ and nothing ever leaves your machine.
 
 ## Features
 
-- **View** — fast, accurate PDF rendering (pdf.js), continuous scroll, zoom, thumbnails
-- **Comment & Annotate** — highlight, freehand draw, text boxes, sticky notes
+- **View** — fast, accurate PDF rendering (pdf.js), continuous scroll, zoom, thumbnails, in-document **search** with jump-to-match highlighting
+- **Comment & Annotate** — highlight, freehand draw, text boxes, sticky notes; signatures/text can be freely rotated in place
 - **Fill & Sign** — fills real AcroForm fields (text, checkbox, radio, dropdown); draw, type, or upload a signature; saved signatures reusable across documents; date stamps, checkmarks, X marks, circles, lines
+- **Scan Document** — use your phone or laptop camera to capture pages, drag corners for perspective correction (straightens an angled photo like a real scanner), color/grayscale/B&W filters, multi-page sessions combined into one PDF
 - **Organize** — drag-to-reorder pages, rotate, delete, merge multiple files, extract/split pages
-- **Page Tools** — text watermarks, page numbering, image-to-PDF
+- **Page Tools** — text watermarks, page numbering, page **crop** (margin trim via CropBox), **export pages as images** (PNG/JPEG, zipped), image-to-PDF
+- **Compress** — shrink scan/photo-heavy PDFs by re-encoding pages at a chosen quality level
+- **Print** — opens the fully-rendered document (with all edits baked in) in a new tab for the browser's native print dialog
 - **Protect** — real AES-256 password encryption (PDF 2.0 standard security handler), implemented on native Web Crypto with no third-party crypto dependency, and self-verified before every download
-- **Installable PWA** — works offline once installed, on both desktop (Windows/Mac/Linux) and Android
+- **Installable PWA** — works fully offline once installed, with a mobile-first UI (bottom tab navigation, touch-sized handles, camera scanner) on desktop (Windows/Mac/Linux) and Android
+- **Real Android app** — packageable as an installable APK/AAB via a Trusted Web Activity — see [ANDROID.md](ANDROID.md)
 
 ## Tech stack
 

@@ -13,6 +13,7 @@ import {
   FileText,
   Trash2,
   Loader2,
+  ScanLine,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDocStore } from '../store/useDocStore';
@@ -20,6 +21,7 @@ import { useUiStore } from '../store/useUiStore';
 import type { EditorMode } from '../lib/types';
 import { listRecentFiles, deleteRecentFile } from '../lib/db';
 import type { RecentFile } from '../lib/types';
+import ScannerModal from '../components/scanner/ScannerModal';
 
 interface Tool {
   id: string;
@@ -143,10 +145,21 @@ export default function Home() {
   const [recents, setRecents] = useState<RecentFile[]>([]);
   const [loadingToolId, setLoadingToolId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     listRecentFiles().then(setRecents).catch(() => {});
+  }, []);
+
+  // Handle app-shortcut launches (long-press icon on Android / right-click
+  // on desktop) — e.g. ?action=scan opens the camera immediately.
+  useEffect(() => {
+    const action = new URLSearchParams(window.location.search).get('action');
+    if (!action) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (action === 'scan') setScannerOpen(true);
+    if (action === 'fillsign') inputRefs.current['fillsign']?.click();
   }, []);
 
   async function openFiles(files: File[], mode: EditorMode) {
@@ -254,6 +267,20 @@ export default function Home() {
         All tools
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <button
+          onClick={() => setScannerOpen(true)}
+          className="group relative flex flex-col items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white">
+            <ScanLine size={18} />
+          </div>
+          <div>
+            <div className="text-sm font-medium">Scan Document</div>
+            <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              Use your camera to scan pages into a PDF
+            </div>
+          </div>
+        </button>
         {TOOLS.map((tool) => {
           const Icon = tool.icon;
           return (
@@ -330,6 +357,16 @@ export default function Home() {
       <footer className="mt-auto pt-12 text-center text-xs text-neutral-400 dark:text-neutral-600">
         Your files are processed entirely in your browser. Nothing is uploaded anywhere.
       </footer>
+
+      {scannerOpen && (
+        <ScannerModal
+          onClose={() => setScannerOpen(false)}
+          onDone={async (files) => {
+            setScannerOpen(false);
+            await openFiles(files, 'organize');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -190,6 +190,14 @@ export interface WatermarkOptions {
   pageRange: string;
 }
 
+export interface CropOptions {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  pageRange: string;
+}
+
 export interface PageNumberOptions {
   format: string;
   startAt: number;

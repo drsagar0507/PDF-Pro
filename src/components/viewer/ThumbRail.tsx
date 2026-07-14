@@ -23,11 +23,11 @@ export default function ThumbRail() {
             }`}
           >
             <div
-              className={`overflow-hidden rounded border shadow-sm ${
+              className={`w-28 overflow-hidden rounded border shadow-sm ${
                 currentPageIndex === i ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
               }`}
             >
-              <PageThumb page={page} targetWidth={112} />
+              <PageThumb page={page} targetWidth={220} />
             </div>
             <span className="text-[11px] text-neutral-500 dark:text-neutral-400">{i + 1}</span>
           </button>

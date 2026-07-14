@@ -6,16 +6,18 @@ import { getPdfjsDoc } from '../../lib/docCache';
 
 interface Props {
   page: PageRef;
+  /** Backing-store render resolution in px — the element itself always
+   * fills its parent's width via CSS and scales down cleanly. */
   targetWidth?: number;
 }
 
-export default function PageThumb({ page, targetWidth = 120 }: Props) {
+export default function PageThumb({ page, targetWidth = 220 }: Props) {
   const source = useDocStore((s) => s.sources[page.sourceId]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotation = pageTotalRotation(page);
   const dispSize = displaySize(page.width, page.height, rotation);
   const scale = targetWidth / dispSize.width;
-  const cssHeight = dispSize.height * scale;
+  const aspectRatio = `${dispSize.width} / ${dispSize.height}`;
 
   useEffect(() => {
     if (!source || source.kind !== 'pdf') return;
@@ -54,7 +56,7 @@ export default function PageThumb({ page, targetWidth = 120 }: Props) {
   if (!source) return null;
 
   return (
-    <div className="relative bg-white" style={{ width: targetWidth, height: cssHeight }}>
+    <div className="relative w-full bg-white" style={{ aspectRatio }}>
       {source.kind === 'pdf' ? (
         <canvas ref={canvasRef} className="block h-full w-full" />
       ) : (

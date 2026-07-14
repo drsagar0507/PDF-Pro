@@ -1,6 +1,7 @@
 import { PDFDocument, PDFPage, StandardFonts, degrees } from 'pdf-lib';
 import type {
   Annotation,
+  CropOptions,
   FormFieldValue,
   PageNumberOptions,
   PageRef,
@@ -31,6 +32,7 @@ export interface ExportOptions {
   includeAnnotations?: boolean;
   watermark?: WatermarkOptions | null;
   pageNumbers?: PageNumberOptions | null;
+  crop?: CropOptions | null;
 }
 
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; format: 'png' | 'jpg' } {
@@ -285,7 +287,27 @@ export async function buildOutputPdf(
     applyPageNumbers(finalPages, options.pageNumbers, helvetica);
   }
 
+  if (options.crop) {
+    applyCrop(finalPages, options.crop);
+  }
+
   return outDoc.save();
+}
+
+/**
+ * Trims the visible page area by setting /CropBox (content is preserved,
+ * not deleted — matching how Acrobat's own Crop Pages tool works). Margins
+ * are applied in the page's native, unrotated coordinate space.
+ */
+function applyCrop(finalPages: { page: PDFPage; ref: PageRef }[], crop: CropOptions) {
+  const indices = parsePageRange(crop.pageRange, finalPages.length);
+  for (const idx of indices) {
+    const { page } = finalPages[idx];
+    const { width, height } = page.getSize();
+    const newWidth = Math.max(1, width - crop.left - crop.right);
+    const newHeight = Math.max(1, height - crop.top - crop.bottom);
+    page.setCropBox(crop.left, crop.bottom, newWidth, newHeight);
+  }
 }
 
 function applyWatermark(

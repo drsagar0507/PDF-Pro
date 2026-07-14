@@ -113,8 +113,8 @@ export default function OrganizeGrid() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-white px-4 py-2.5 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="flex h-full min-w-0 flex-1 flex-col">
+      <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-2 py-2 sm:px-4 sm:py-2.5 dark:border-neutral-800 dark:bg-neutral-900">
         <input
           ref={fileInputRef}
           type="file"
@@ -126,43 +126,45 @@ export default function OrganizeGrid() {
             e.target.value = '';
           }}
         />
-        <ToolbarButton icon={Plus} label="Add files" onClick={() => fileInputRef.current?.click()} />
-        <div className="mx-1 h-5 w-px bg-neutral-200 dark:bg-neutral-700" />
-        <ToolbarButton
-          icon={hasSelection ? CheckSquare : Square}
-          label={hasSelection ? `${selectedPageIds.length} selected` : 'Select all'}
-          onClick={() => (hasSelection ? clearSelection() : selectAll())}
-        />
-        <ToolbarButton icon={RotateCcw} label="Rotate left" disabled={!hasSelection} onClick={() => rotatePages(selectedPageIds, -90)} />
-        <ToolbarButton icon={RotateCw} label="Rotate right" disabled={!hasSelection} onClick={() => rotatePages(selectedPageIds, 90)} />
-        <ToolbarButton
-          icon={Trash2}
-          label="Delete"
-          disabled={!hasSelection}
-          onClick={() => {
-            deletePages(selectedPageIds);
-          }}
-        />
-        <ToolbarButton icon={Download} label="Extract selected" disabled={!hasSelection || busy} onClick={extractSelected} />
-        <ToolbarButton icon={Scissors} label="Split into files" disabled={!hasSelection || busy} onClick={splitEachSelectedAsOwnFile} />
-        <div className="ml-auto">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
+          <ToolbarButton icon={Plus} label="Add files" onClick={() => fileInputRef.current?.click()} />
+          <div className="mx-1 h-5 w-px flex-none bg-neutral-200 dark:bg-neutral-700" />
+          <ToolbarButton
+            icon={hasSelection ? CheckSquare : Square}
+            label={hasSelection ? `${selectedPageIds.length} selected` : 'Select all'}
+            onClick={() => (hasSelection ? clearSelection() : selectAll())}
+          />
+          <ToolbarButton icon={RotateCcw} label="Rotate left" disabled={!hasSelection} onClick={() => rotatePages(selectedPageIds, -90)} />
+          <ToolbarButton icon={RotateCw} label="Rotate right" disabled={!hasSelection} onClick={() => rotatePages(selectedPageIds, 90)} />
+          <ToolbarButton
+            icon={Trash2}
+            label="Delete"
+            disabled={!hasSelection}
+            onClick={() => {
+              deletePages(selectedPageIds);
+            }}
+          />
+          <ToolbarButton icon={Download} label="Extract selected" disabled={!hasSelection || busy} onClick={extractSelected} />
+          <ToolbarButton icon={Scissors} label="Split into files" disabled={!hasSelection || busy} onClick={splitEachSelectedAsOwnFile} />
+        </div>
+        <div className="flex-none">
           <button
             onClick={saveWholeDocument}
             disabled={busy || pages.length === 0}
-            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50 sm:px-4"
           >
             Save document
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-5">
         {pages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-neutral-400">
             Add files to get started
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-6">
             {pages.map((page, i) => {
               const selected = selectedPageIds.includes(page.id);
               return (
@@ -179,7 +181,7 @@ export default function OrganizeGrid() {
                     setDragIndex(null);
                     setOverIndex(null);
                   }}
-                  className={`group relative cursor-grab rounded-lg border-2 p-1.5 transition active:cursor-grabbing ${
+                  className={`group relative min-w-0 cursor-grab rounded-lg border-2 p-1.5 transition active:cursor-grabbing ${
                     selected
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
                       : overIndex === i
@@ -188,32 +190,32 @@ export default function OrganizeGrid() {
                   }`}
                 >
                   <div
-                    className="mx-auto flex items-center justify-center overflow-hidden rounded border border-neutral-200 shadow-sm dark:border-neutral-700"
+                    className="w-full overflow-hidden rounded border border-neutral-200 shadow-sm dark:border-neutral-700"
                     onClick={() => toggleSelected(page.id)}
                   >
-                    <PageThumb page={page} targetWidth={150} />
+                    <PageThumb page={page} targetWidth={260} />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between px-0.5">
                     <span className="text-xs text-neutral-500 dark:text-neutral-400">{i + 1}</span>
-                    <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                    <div className="flex items-center gap-0.5 transition sm:opacity-0 sm:group-hover:opacity-100">
                       <button
                         title="Rotate left"
                         onClick={() => rotatePages([page.id], -90)}
-                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
                       >
                         <RotateCcw size={13} />
                       </button>
                       <button
                         title="Rotate right"
                         onClick={() => rotatePages([page.id], 90)}
-                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
                       >
                         <RotateCw size={13} />
                       </button>
                       <button
                         title="Delete"
                         onClick={() => deletePages([page.id])}
-                        className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        className="rounded p-1.5 text-red-500 hover:bg-red-50 sm:p-1 dark:hover:bg-red-950/40"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -221,8 +223,8 @@ export default function OrganizeGrid() {
                   </div>
                   <button
                     onClick={() => toggleSelected(page.id)}
-                    className={`absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded border-2 bg-white/90 transition dark:bg-neutral-900/90 ${
-                      selected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-neutral-300 opacity-0 group-hover:opacity-100'
+                    className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded border-2 bg-white/90 transition sm:h-5 sm:w-5 dark:bg-neutral-900/90 ${
+                      selected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-neutral-300 sm:opacity-0 sm:group-hover:opacity-100'
                     }`}
                   >
                     {selected && <CheckSquare size={12} />}

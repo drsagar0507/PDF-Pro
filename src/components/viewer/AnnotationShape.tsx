@@ -259,8 +259,11 @@ export default function AnnotationShape({
       {selected && interactive && hasBox && (
         <div
           onPointerDown={startResize}
-          className="absolute -bottom-1.5 -right-1.5 h-3 w-3 cursor-nwse-resize rounded-full border-2 border-white bg-indigo-500 shadow"
-        />
+          title="Drag to resize"
+          className="absolute -bottom-4 -right-4 flex h-9 w-9 cursor-nwse-resize touch-none items-center justify-center"
+        >
+          <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-indigo-500 shadow" />
+        </div>
       )}
       {selected && interactive && hasBox && rotatable && (
         <>
@@ -268,9 +271,11 @@ export default function AnnotationShape({
           <div
             onPointerDown={startRotate}
             title="Drag to rotate"
-            className="absolute left-1/2 top-0 flex h-5 w-5 -translate-x-1/2 -translate-y-11 cursor-grab items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-white shadow active:cursor-grabbing"
+            className="absolute left-1/2 top-0 flex h-10 w-10 -translate-x-1/2 -translate-y-[3.1rem] cursor-grab touch-none items-center justify-center active:cursor-grabbing"
           >
-            <RotateCw size={11} />
+            <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-white shadow">
+              <RotateCw size={12} />
+            </div>
           </div>
         </>
       )}
@@ -281,9 +286,12 @@ export default function AnnotationShape({
             e.stopPropagation();
             onDelete();
           }}
-          className="absolute -right-2.5 -top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+          title="Delete"
+          className="absolute -right-4 -top-4 flex h-9 w-9 touch-none items-center justify-center"
         >
-          <X size={12} />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600">
+            <X size={13} />
+          </div>
         </button>
       )}
     </div>

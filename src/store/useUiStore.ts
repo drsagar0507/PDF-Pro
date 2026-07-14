@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { AnnotateTool, FillSignTool } from '../lib/types';
 
+export interface SearchHighlight {
+  pageId: string;
+  rect: { x0: number; y0: number; x1: number; y1: number };
+  token: number;
+}
+
 interface UiState {
   screen: 'home' | 'editor';
   zoom: number;
@@ -11,6 +17,7 @@ interface UiState {
   fillSignTool: FillSignTool;
   activeSignatureDataUrl: string | null;
   activeSignatureId: string | null;
+  searchHighlight: SearchHighlight | null;
 
   goHome: () => void;
   goEditor: () => void;
@@ -21,6 +28,7 @@ interface UiState {
   setAnnotateColor: (c: string) => void;
   setFillSignTool: (t: FillSignTool) => void;
   setActiveSignature: (dataUrl: string | null, id: string | null) => void;
+  flashSearchHighlight: (pageId: string, rect: SearchHighlight['rect']) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -33,6 +41,7 @@ export const useUiStore = create<UiState>((set) => ({
   fillSignTool: 'select',
   activeSignatureDataUrl: null,
   activeSignatureId: null,
+  searchHighlight: null,
 
   goHome: () => set({ screen: 'home' }),
   goEditor: () => set({ screen: 'editor' }),
@@ -43,4 +52,5 @@ export const useUiStore = create<UiState>((set) => ({
   setAnnotateColor: (c) => set({ annotateColor: c }),
   setFillSignTool: (t) => set({ fillSignTool: t }),
   setActiveSignature: (dataUrl, id) => set({ activeSignatureDataUrl: dataUrl, activeSignatureId: id }),
+  flashSearchHighlight: (pageId, rect) => set({ searchHighlight: { pageId, rect, token: Date.now() } }),
 }));
