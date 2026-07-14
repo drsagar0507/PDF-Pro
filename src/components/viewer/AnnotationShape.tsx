@@ -32,8 +32,11 @@ export default function AnnotationShape({
   onDelete,
   onEditText,
 }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
+  // A freshly-placed, still-empty note/text box opens straight into edit
+  // mode — otherwise it just sits there with no visible way to add text
+  // until you discover you have to double-click it.
+  const [editing, setEditing] = useState(() => (ann.kind === 'note' || ann.kind === 'text') && !ann.text);
+  const [draft, setDraft] = useState(() => (ann.kind === 'note' ? ann.text : ''));
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const hasBox = 'x' in ann && 'width' in ann;
@@ -153,7 +156,10 @@ export default function AnnotationShape({
         defaultValue={ann.text}
         onBlur={(e) => {
           setEditing(false);
-          onEditText?.(e.target.value);
+          // Left empty: remove it rather than leave a contentless "Text"
+          // placeholder box behind on the page.
+          if (!e.target.value.trim()) onDelete();
+          else onEditText?.(e.target.value);
         }}
       />
     ) : (
@@ -228,7 +234,11 @@ export default function AnnotationShape({
       {content}
       {ann.kind === 'note' && editing && (
         <div
-          className="absolute left-full top-0 z-20 ml-2 w-56 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-800"
+          className={`absolute top-0 z-20 w-56 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-800 ${
+            // A note placed near the right edge would push this popup off
+            // the page (and out of view) if it always opened to the right.
+            x > pageWidth - 260 ? 'right-full mr-2' : 'left-full ml-2'
+          }`}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <textarea
@@ -240,7 +250,13 @@ export default function AnnotationShape({
           <div className="mt-1 flex justify-end gap-1">
             <button
               className="rounded px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-              onClick={() => setEditing(false)}
+              onClick={() => {
+                // Cancelling a note that was never actually saved with text
+                // (freshly placed, or emptied out) removes it — otherwise
+                // it's left behind as an invisible, contentless sticky note.
+                if (ann.kind === 'note' && !ann.text) onDelete();
+                setEditing(false);
+              }}
             >
               Cancel
             </button>

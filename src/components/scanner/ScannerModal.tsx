@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Crop,
 } from 'lucide-react';
 import { warpPerspective, type Point } from '../../lib/perspectiveWarp';
 import { detectDocumentQuad } from '../../lib/documentDetect';
@@ -28,6 +29,8 @@ interface Props {
   onDone: (files: File[]) => void | Promise<void>;
 }
 
+type Phase = 'camera' | 'adjust' | 'review';
+
 const DEFAULT_CORNERS = (): [Point, Point, Point, Point] => [
   { x: 0.08, y: 0.06 },
   { x: 0.92, y: 0.06 },
@@ -38,13 +41,22 @@ const DEFAULT_CORNERS = (): [Point, Point, Point, Point] => [
 const LOUPE_SIZE = 112;
 const LOUPE_ZOOM = 2.6;
 
+function cloneCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = src.width;
+  out.height = src.height;
+  out.getContext('2d')!.drawImage(src, 0, 0);
+  return out;
+}
+
 export default function ScannerModal({ onClose, onDone }: Props) {
-  const [phase, setPhase] = useState<'camera' | 'adjust'>('camera');
+  const [phase, setPhase] = useState<Phase>('camera');
   const [session, setSession] = useState<ScannedPage[]>([]);
   const [captured, setCaptured] = useState<HTMLCanvasElement | null>(null);
   const [corners, setCorners] = useState<[Point, Point, Point, Point]>(DEFAULT_CORNERS());
   const [autoDetected, setAutoDetected] = useState(false);
   const [filter, setFilter] = useState<ScanFilter>('color');
+  const [reviewCanvas, setReviewCanvas] = useState<HTMLCanvasElement | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [finishing, setFinishing] = useState(false);
@@ -56,6 +68,10 @@ export default function ScannerModal({ onClose, onDone }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const imgFrameRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Unfiltered warp output — kept aside so switching filters in the review
+  // step re-derives from the original pixels instead of compounding
+  // enhancement passes on top of each other.
+  const rawWarpedRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (phase !== 'camera') return;
@@ -171,14 +187,46 @@ export default function ScannerModal({ onClose, onDone }: Props) {
       const outH = Math.round(Math.max(leftH, rightH));
 
       const warped = warpPerspective(captured, [tl, tr, br, bl], Math.max(outW, 50), Math.max(outH, 50));
-      enhanceScan(warped, filter);
-
-      setSession((s) => [...s, { id: crypto.randomUUID(), canvas: warped }]);
-      setCaptured(null);
-      setPhase('camera');
+      rawWarpedRef.current = warped;
+      const preview = cloneCanvas(warped);
+      enhanceScan(preview, filter);
+      setReviewCanvas(preview);
+      setPhase('review');
     } finally {
       setProcessing(false);
     }
+  }
+
+  function reapplyFilter(next: ScanFilter) {
+    setFilter(next);
+    if (!rawWarpedRef.current) return;
+    const preview = cloneCanvas(rawWarpedRef.current);
+    enhanceScan(preview, next);
+    setReviewCanvas(preview);
+  }
+
+  function keepReviewedPage() {
+    if (!reviewCanvas) return;
+    setSession((s) => [...s, { id: crypto.randomUUID(), canvas: reviewCanvas }]);
+    setReviewCanvas(null);
+    rawWarpedRef.current = null;
+    setCaptured(null);
+    setPhase('camera');
+  }
+
+  function retakeFromReview() {
+    setReviewCanvas(null);
+    rawWarpedRef.current = null;
+    setCaptured(null);
+    setPhase('camera');
+  }
+
+  function backToAdjustFromReview() {
+    // Keep the original photo and current corners so re-cropping starts
+    // from where they left off, not from scratch.
+    setReviewCanvas(null);
+    rawWarpedRef.current = null;
+    setPhase('adjust');
   }
 
   function retake() {
@@ -251,7 +299,9 @@ export default function ScannerModal({ onClose, onDone }: Props) {
         <button onClick={onClose} className="rounded-full p-1.5 hover:bg-white/10">
           <X size={20} />
         </button>
-        <h3 className="text-sm font-medium">Scan Document</h3>
+        <h3 className="text-sm font-medium">
+          {phase === 'review' ? 'Review Scan' : phase === 'adjust' ? 'Adjust Crop' : 'Scan Document'}
+        </h3>
         <div className="w-8" />
       </div>
 
@@ -316,6 +366,17 @@ export default function ScannerModal({ onClose, onDone }: Props) {
                 <Loader2 size={28} className="animate-spin text-white" />
               </div>
             )}
+          </div>
+        )}
+
+        {phase === 'review' && reviewCanvas && (
+          <div className="flex max-h-full max-w-full flex-col items-center gap-3 overflow-y-auto p-3">
+            <img
+              src={reviewCanvas.toDataURL('image/jpeg', 0.92)}
+              alt="scanned page"
+              className="max-h-[68vh] max-w-full rounded shadow-2xl"
+            />
+            <p className="text-xs text-white/50">Look it over — retake, adjust the crop, or change the filter below</p>
           </div>
         )}
       </div>
@@ -406,19 +467,6 @@ export default function ScannerModal({ onClose, onDone }: Props) {
               <Sparkles size={12} /> Edges auto-detected — fine-tune if needed
             </div>
           )}
-          <div className="flex gap-2">
-            {(['color', 'grayscale', 'bw'] as ScanFilter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
-                  filter === f ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/80'
-                }`}
-              >
-                {f === 'bw' ? 'B & W' : f}
-              </button>
-            ))}
-          </div>
           <div className="flex items-center gap-4">
             <button onClick={retake} className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm text-white">
               <RotateCcw size={15} /> Retake
@@ -429,10 +477,42 @@ export default function ScannerModal({ onClose, onDone }: Props) {
               className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-600/30 disabled:opacity-60"
             >
               {processing ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-              Use this scan
+              Straighten & continue
             </button>
           </div>
           {!autoDetected && <p className="text-center text-xs text-white/50">Drag the corners to match the edges of the page</p>}
+        </div>
+      )}
+
+      {phase === 'review' && (
+        <div className="flex flex-col items-center gap-3 px-4 pb-6 pt-3">
+          <div className="flex gap-2">
+            {(['color', 'grayscale', 'bw'] as ScanFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => reapplyFilter(f)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
+                  filter === f ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/80'
+                }`}
+              >
+                {f === 'bw' ? 'B & W' : f}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button onClick={retakeFromReview} className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm text-white">
+              <RotateCcw size={15} /> Retake
+            </button>
+            <button onClick={backToAdjustFromReview} className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm text-white">
+              <Crop size={15} /> Adjust crop
+            </button>
+            <button
+              onClick={keepReviewedPage}
+              className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-600/30"
+            >
+              <Check size={15} /> Keep this page
+            </button>
+          </div>
         </div>
       )}
     </div>

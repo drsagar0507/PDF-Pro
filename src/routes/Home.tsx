@@ -33,7 +33,10 @@ interface Tool {
   accept: string;
   multiple: boolean;
   accent: string;
+  category: string;
 }
+
+const CATEGORIES = ['Create', 'Edit & organize', 'Sign & review', 'Finish & protect'] as const;
 
 const TOOLS: Tool[] = [
   {
@@ -45,76 +48,7 @@ const TOOLS: Tool[] = [
     accept: '.pdf,application/pdf',
     multiple: false,
     accent: 'from-indigo-500 to-indigo-600',
-  },
-  {
-    id: 'merge',
-    label: 'Merge Files',
-    description: 'Combine PDFs and images into one file',
-    icon: Combine,
-    mode: 'organize',
-    accept: '.pdf,application/pdf,image/png,image/jpeg',
-    multiple: true,
-    accent: 'from-blue-500 to-blue-600',
-  },
-  {
-    id: 'organize',
-    label: 'Organize Pages',
-    description: 'Reorder, rotate, delete, and insert pages',
-    icon: LayoutGrid,
-    mode: 'organize',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-violet-500 to-violet-600',
-  },
-  {
-    id: 'split',
-    label: 'Split & Extract',
-    description: 'Pull pages out into new PDFs',
-    icon: Scissors,
-    mode: 'organize',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-fuchsia-500 to-fuchsia-600',
-  },
-  {
-    id: 'fillsign',
-    label: 'Fill & Sign',
-    description: 'Fill forms and sign with a drawn, typed, or uploaded signature',
-    icon: PenTool,
-    mode: 'fillsign',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-amber-500 to-amber-600',
-  },
-  {
-    id: 'annotate',
-    label: 'Comment & Annotate',
-    description: 'Highlight, draw, add sticky notes and text',
-    icon: MessageSquareText,
-    mode: 'annotate',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-rose-500 to-rose-600',
-  },
-  {
-    id: 'watermark',
-    label: 'Watermark',
-    description: 'Stamp text across every page',
-    icon: Stamp,
-    mode: 'pagetools',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-teal-500 to-teal-600',
-  },
-  {
-    id: 'pagenumbers',
-    label: 'Page Numbers',
-    description: 'Add page numbers in any position',
-    icon: Hash,
-    mode: 'pagetools',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    accent: 'from-cyan-500 to-cyan-600',
+    category: 'Create',
   },
   {
     id: 'imagetopdf',
@@ -125,6 +59,84 @@ const TOOLS: Tool[] = [
     accept: 'image/png,image/jpeg',
     multiple: true,
     accent: 'from-emerald-500 to-emerald-600',
+    category: 'Create',
+  },
+  {
+    id: 'merge',
+    label: 'Merge Files',
+    description: 'Combine PDFs and images into one file',
+    icon: Combine,
+    mode: 'organize',
+    accept: '.pdf,application/pdf,image/png,image/jpeg',
+    multiple: true,
+    accent: 'from-blue-500 to-blue-600',
+    category: 'Edit & organize',
+  },
+  {
+    id: 'organize',
+    label: 'Organize Pages',
+    description: 'Reorder, rotate, delete, and insert pages',
+    icon: LayoutGrid,
+    mode: 'organize',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-violet-500 to-violet-600',
+    category: 'Edit & organize',
+  },
+  {
+    id: 'split',
+    label: 'Split & Extract',
+    description: 'Pull pages out into new PDFs',
+    icon: Scissors,
+    mode: 'organize',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-fuchsia-500 to-fuchsia-600',
+    category: 'Edit & organize',
+  },
+  {
+    id: 'fillsign',
+    label: 'Fill & Sign',
+    description: 'Fill forms and sign with a drawn, typed, or uploaded signature',
+    icon: PenTool,
+    mode: 'fillsign',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-amber-500 to-amber-600',
+    category: 'Sign & review',
+  },
+  {
+    id: 'annotate',
+    label: 'Comment & Annotate',
+    description: 'Highlight, draw, add sticky notes and text',
+    icon: MessageSquareText,
+    mode: 'annotate',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-rose-500 to-rose-600',
+    category: 'Sign & review',
+  },
+  {
+    id: 'watermark',
+    label: 'Watermark',
+    description: 'Stamp text across every page',
+    icon: Stamp,
+    mode: 'pagetools',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-teal-500 to-teal-600',
+    category: 'Finish & protect',
+  },
+  {
+    id: 'pagenumbers',
+    label: 'Page Numbers',
+    description: 'Add page numbers in any position',
+    icon: Hash,
+    mode: 'pagetools',
+    accept: '.pdf,application/pdf',
+    multiple: false,
+    accent: 'from-cyan-500 to-cyan-600',
+    category: 'Finish & protect',
   },
   {
     id: 'protect',
@@ -135,6 +147,7 @@ const TOOLS: Tool[] = [
     accept: '.pdf,application/pdf',
     multiple: false,
     accent: 'from-slate-500 to-slate-600',
+    category: 'Finish & protect',
   },
 ];
 
@@ -265,42 +278,51 @@ export default function Home() {
         </button>
       </div>
 
-      <h2 className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400" style={{ animationDelay: '80ms' }}>
-        All tools
-      </h2>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <ToolCard
-          label="Scan Document"
-          description="Use your camera to scan pages into a PDF"
-          icon={ScanLine}
-          accent="from-orange-500 to-red-500"
-          delay={100}
-          onClick={() => setScannerOpen(true)}
-        />
-        {TOOLS.map((tool, i) => (
-          <ToolCard
-            key={tool.id}
-            label={tool.label}
-            description={tool.description}
-            icon={tool.icon}
-            accent={tool.accent}
-            delay={120 + i * 20}
-            loading={loadingToolId === tool.id}
-            onClick={() => inputRefs.current[tool.id]?.click()}
+      {CATEGORIES.map((category, catIndex) => (
+        <div key={category} className={catIndex > 0 ? 'mt-8' : ''}>
+          <h2
+            className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+            style={{ animationDelay: `${80 + catIndex * 40}ms` }}
           >
-            <input
-              ref={(el) => {
-                inputRefs.current[tool.id] = el;
-              }}
-              type="file"
-              accept={tool.accept}
-              multiple={tool.multiple}
-              className="hidden"
-              onChange={(e) => handleToolFiles(tool, e.target.files)}
-            />
-          </ToolCard>
-        ))}
-      </div>
+            {category}
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {category === 'Create' && (
+              <ToolCard
+                label="Scan Document"
+                description="Use your camera to scan pages into a PDF"
+                icon={ScanLine}
+                accent="from-orange-500 to-red-500"
+                delay={100}
+                onClick={() => setScannerOpen(true)}
+              />
+            )}
+            {TOOLS.filter((t) => t.category === category).map((tool, i) => (
+              <ToolCard
+                key={tool.id}
+                label={tool.label}
+                description={tool.description}
+                icon={tool.icon}
+                accent={tool.accent}
+                delay={120 + catIndex * 40 + i * 20}
+                loading={loadingToolId === tool.id}
+                onClick={() => inputRefs.current[tool.id]?.click()}
+              >
+                <input
+                  ref={(el) => {
+                    inputRefs.current[tool.id] = el;
+                  }}
+                  type="file"
+                  accept={tool.accept}
+                  multiple={tool.multiple}
+                  className="hidden"
+                  onChange={(e) => handleToolFiles(tool, e.target.files)}
+                />
+              </ToolCard>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {recents.length > 0 && (
         <div className="mt-12 animate-fade-in" style={{ animationDelay: '80ms' }}>

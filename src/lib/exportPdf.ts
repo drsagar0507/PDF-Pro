@@ -134,7 +134,37 @@ function drawAnnotation(
         localRotationDeg: ann.rotation ?? 0,
       });
       break;
-    case 'note':
+    case 'note': {
+      // Bake a visible icon into the page content itself — a real PDF
+      // /Annot Text (added below) is invisible to plain canvas rendering
+      // (including this app's own viewer when the saved file is reopened;
+      // it only shows up in readers that render an annotation layer), so
+      // without this the note would appear to silently vanish.
+      const noteSize = 20;
+      drawDisplayRect(page, {
+        xDisp: ann.x,
+        yDisp: ann.y,
+        widthDisp: noteSize,
+        heightDisp: noteSize,
+        color,
+        opacity: 0.95,
+        borderColor: colorOf('#000000'),
+        borderWidth: 1,
+        nativeWidth,
+        nativeHeight,
+        rotation,
+      });
+      const foldColor = colorOf('#000000');
+      drawDisplayPolyline(
+        page,
+        [
+          { x: ann.x + noteSize * 0.55, y: ann.y },
+          { x: ann.x + noteSize, y: ann.y + noteSize * 0.45 },
+          { x: ann.x + noteSize * 0.55, y: ann.y + noteSize * 0.45 },
+          { x: ann.x + noteSize * 0.55, y: ann.y },
+        ],
+        { color: foldColor, thickness: 1.5, nativeWidth, nativeHeight, rotation },
+      );
       addStickyNoteAnnotation(page, {
         xDisp: ann.x,
         yDisp: ann.y,
@@ -144,6 +174,7 @@ function drawAnnotation(
         rotation,
       });
       break;
+    }
     case 'image':
       // Image annotations need an async embedPng/embedJpg call, so the
       // caller handles them directly rather than routing through here.

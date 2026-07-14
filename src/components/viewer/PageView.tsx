@@ -35,7 +35,9 @@ export default function PageView({ page, pageNumber }: Props) {
   const setCurrentPageIndex = useUiStore((s) => s.setCurrentPageIndex);
   const annotateTool = useUiStore((s) => s.annotateTool);
   const annotateColor = useUiStore((s) => s.annotateColor);
+  const setAnnotateTool = useUiStore((s) => s.setAnnotateTool);
   const fillSignTool = useUiStore((s) => s.fillSignTool);
+  const setFillSignTool = useUiStore((s) => s.setFillSignTool);
   const activeSignatureDataUrl = useUiStore((s) => s.activeSignatureDataUrl);
   const searchHighlight = useUiStore((s) => s.searchHighlight);
 
@@ -132,17 +134,29 @@ export default function PageView({ page, pageNumber }: Props) {
       newId = addAnnotation(page.id, { kind: 'highlight', x, y, width: w, height: h, color, opacity: 0.42 });
     } else if (activeTool === 'checkmark' || activeTool === 'xmark' || activeTool === 'circle' || activeTool === 'line') {
       newId = addAnnotation(page.id, { kind: activeTool, x, y, width: w, height: h, color: '#DC2626', strokeWidth: 3 });
+      revertToSelectTool();
     } else if (activeTool === 'signature' || activeTool === 'initials') {
       if (!activeSignatureDataUrl) {
         toast.error('Pick or create a signature first');
         return;
       }
       newId = addAnnotation(page.id, { kind: 'image', x, y, width: w, height: h, color, dataUrl: activeSignatureDataUrl });
+      revertToSelectTool();
     }
     // Select immediately so the move/resize/rotate/delete handles are
     // available right away — without this, placing a signature required an
     // extra click on it before you could do anything further with it.
     setSelectedId(newId);
+  }
+
+  // Single-shot placement tools (one note/text box/date stamp per click,
+  // unlike highlight/ink/signature which you plausibly want to place
+  // several of in a row) revert to Select afterward — otherwise every
+  // subsequent click anywhere on the page places another one instead of
+  // letting you select/edit what you just placed.
+  function revertToSelectTool() {
+    if (mode === 'annotate') setAnnotateTool('select');
+    else if (mode === 'fillsign') setFillSignTool('select');
   }
 
   function handleBackgroundPointerDown(e: React.PointerEvent) {
@@ -165,16 +179,20 @@ export default function PageView({ page, pageNumber }: Props) {
         color: '#111827',
       });
       setSelectedId(id);
+      revertToSelectTool();
       return;
     }
     if (activeTool === 'date') {
       const dateStr = new Date().toLocaleDateString();
-      addAnnotation(page.id, { kind: 'text', x: start.x, y: start.y, width: 140, fontSize: 13, text: dateStr, color: '#111827' });
+      const id = addAnnotation(page.id, { kind: 'text', x: start.x, y: start.y, width: 140, fontSize: 13, text: dateStr, color: '#111827' });
+      setSelectedId(id);
+      revertToSelectTool();
       return;
     }
     if (activeTool === 'note') {
       const id = addAnnotation(page.id, { kind: 'note', x: start.x, y: start.y, text: '', color: '#FDE68A' });
       setSelectedId(id);
+      revertToSelectTool();
       return;
     }
 
