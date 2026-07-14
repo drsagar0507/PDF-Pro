@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@import "@fontsource/dancing-script/400.css";
+@import "@fontsource/dancing-script/700.css";
+@import "@fontsource/caveat/400.css";
+@import "@fontsource/caveat/700.css";
+@import "@fontsource/great-vibes/400.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.55);
+}
+
+.font-sig-dancing { font-family: 'Dancing Script', cursive; }
+.font-sig-caveat { font-family: 'Caveat', cursive; }
+.font-sig-vibes { font-family: 'Great Vibes', cursive; }
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-indigo-500 dark:border-neutral-700 dark:bg-neutral-800;
+  }
+}
