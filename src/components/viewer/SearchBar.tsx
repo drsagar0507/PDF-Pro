@@ -62,10 +62,15 @@ export default function SearchBar({ onClose }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <div
+      role="search"
+      aria-label="Search in document"
+      className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900"
+    >
       <Search size={16} className="flex-none text-neutral-400" />
       <input
         ref={inputRef}
+        aria-label="Search text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
@@ -77,25 +82,34 @@ export default function SearchBar({ onClose }: Props) {
       />
       {loading && <Loader2 size={14} className="flex-none animate-spin text-neutral-400" />}
       {!loading && query.trim() && (
-        <span className="flex-none text-xs tabular-nums text-neutral-500">
+        <span className="flex-none text-xs tabular-nums text-neutral-600">
           {matches.length === 0 ? '0 results' : `${activeIndex + 1} of ${matches.length}`}
         </span>
       )}
       <button
         onClick={() => step(-1)}
         disabled={matches.length === 0}
-        className="flex-none rounded p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-800"
+        aria-label="Previous match"
+        title="Previous match"
+        className="flex-none rounded p-1.5 text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-800"
       >
         <ChevronUp size={16} />
       </button>
       <button
         onClick={() => step(1)}
         disabled={matches.length === 0}
-        className="flex-none rounded p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-800"
+        aria-label="Next match"
+        title="Next match"
+        className="flex-none rounded p-1.5 text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-800"
       >
         <ChevronDown size={16} />
       </button>
-      <button onClick={onClose} className="flex-none rounded p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+      <button
+        onClick={onClose}
+        aria-label="Close search"
+        title="Close search"
+        className="flex-none rounded p-1.5 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+      >
         <X size={16} />
       </button>
     </div>

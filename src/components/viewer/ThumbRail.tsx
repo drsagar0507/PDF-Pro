@@ -29,7 +29,7 @@ export default function ThumbRail() {
             >
               <PageThumb page={page} targetWidth={220} />
             </div>
-            <span className="text-[11px] text-neutral-500 dark:text-neutral-400">{i + 1}</span>
+            <span className="text-[11px] text-neutral-600 dark:text-neutral-400">{i + 1}</span>
           </button>
         ))}
       </div>

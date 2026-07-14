@@ -18,7 +18,14 @@ const TOOLS: { id: AnnotateTool; icon: React.ComponentType<{ size?: number }>; l
   { id: 'eraser', icon: Eraser, label: 'Eraser' },
 ];
 
-const COLORS = ['#FFD54A', '#FF7A59', '#4ADE80', '#60A5FA', '#C084FC', '#111827'];
+const COLORS: { hex: string; name: string }[] = [
+  { hex: '#FFD54A', name: 'Yellow' },
+  { hex: '#FF7A59', name: 'Orange' },
+  { hex: '#4ADE80', name: 'Green' },
+  { hex: '#60A5FA', name: 'Blue' },
+  { hex: '#C084FC', name: 'Purple' },
+  { hex: '#111827', name: 'Black' },
+];
 
 export default function AnnotatePanel() {
   const tool = useUiStore((s) => s.annotateTool);
@@ -50,10 +57,13 @@ export default function AnnotatePanel() {
       <div className="flex flex-none items-center gap-2 pr-2">
         {COLORS.map((c) => (
           <button
-            key={c}
-            onClick={() => setColor(c)}
-            className={`h-6 w-6 flex-none rounded-full border-2 transition ${color === c ? 'border-indigo-500 scale-110' : 'border-transparent'}`}
-            style={{ backgroundColor: c }}
+            key={c.hex}
+            onClick={() => setColor(c.hex)}
+            aria-label={`${c.name} color`}
+            aria-pressed={color === c.hex}
+            title={c.name}
+            className={`h-6 w-6 flex-none rounded-full border-2 transition ${color === c.hex ? 'border-indigo-500 scale-110' : 'border-transparent'}`}
+            style={{ backgroundColor: c.hex }}
           />
         ))}
       </div>

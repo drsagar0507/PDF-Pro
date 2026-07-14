@@ -249,7 +249,7 @@ export default function AnnotationShape({
           />
           <div className="mt-1 flex justify-end gap-1">
             <button
-              className="rounded px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              className="rounded px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               onClick={() => {
                 // Cancelling a note that was never actually saved with text
                 // (freshly placed, or emptied out) removes it — otherwise

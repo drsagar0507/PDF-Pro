@@ -199,19 +199,19 @@ export default function OrganizeGrid() {
                     <PageThumb page={page} targetWidth={260} />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between px-0.5">
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400">{i + 1}</span>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{i + 1}</span>
                     <div className="flex items-center gap-0.5 transition sm:opacity-0 sm:group-hover:opacity-100">
                       <button
                         title="Rotate left"
                         onClick={() => rotatePages([page.id], -90)}
-                        className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
+                        className="rounded p-1.5 text-neutral-600 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
                       >
                         <RotateCcw size={13} />
                       </button>
                       <button
                         title="Rotate right"
                         onClick={() => rotatePages([page.id], 90)}
-                        className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
+                        className="rounded p-1.5 text-neutral-600 hover:bg-neutral-100 sm:p-1 dark:hover:bg-neutral-800"
                       >
                         <RotateCw size={13} />
                       </button>
@@ -226,6 +226,9 @@ export default function OrganizeGrid() {
                   </div>
                   <button
                     onClick={() => toggleSelected(page.id)}
+                    role="checkbox"
+                    aria-checked={selected}
+                    aria-label={`Select page ${i + 1}`}
                     className={`absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded border-2 bg-white/90 transition sm:h-5 sm:w-5 dark:bg-neutral-900/90 ${
                       selected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-neutral-300 sm:opacity-0 sm:group-hover:opacity-100'
                     }`}

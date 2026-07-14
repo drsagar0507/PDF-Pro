@@ -108,7 +108,7 @@ export default function PageToolsPanel() {
             key={t}
             onClick={() => setTab(t)}
             className={`flex-none rounded-t-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition ${
-              tab === t ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+              tab === t ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300'
             }`}
           >
             {TAB_LABELS[t]}
@@ -194,7 +194,7 @@ export default function PageToolsPanel() {
 
           {tab === 'crop' && (
             <>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400">
                 Trim margins from each page (in points, 72 = 1 inch). Content is hidden, not deleted.
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -231,7 +231,7 @@ export default function PageToolsPanel() {
               <Field label="Pages (e.g. 1-3,5 — blank = all)">
                 <input value={imgRange} onChange={(e) => setImgRange(e.target.value)} className="input" placeholder="All pages" />
               </Field>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400">
                 One page downloads as a single image; multiple pages download as a .zip.
               </p>
             </>
@@ -239,7 +239,7 @@ export default function PageToolsPanel() {
 
           {tab === 'compress' && (
             <>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400">
                 Re-encodes every page as an optimized image to shrink file size — best for scans and
                 photo-heavy PDFs. Text will no longer be selectable in the result.
               </p>
@@ -278,7 +278,7 @@ export default function PageToolsPanel() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">{label}</span>
       {children}
     </label>
   );

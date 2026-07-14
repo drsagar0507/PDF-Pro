@@ -16,11 +16,15 @@ const FONTS = [
   { id: 'font-sig-vibes', family: 'Great Vibes', label: 'Formal' },
 ];
 
-const COLORS = ['#111827', '#1D4ED8', '#0F766E'];
+const COLORS: { hex: string; name: string }[] = [
+  { hex: '#111827', name: 'Black' },
+  { hex: '#1D4ED8', name: 'Blue' },
+  { hex: '#0F766E', name: 'Teal' },
+];
 
 export default function SignatureModal({ kind, onClose, onConfirm }: Props) {
   const [tab, setTab] = useState<Tab>('draw');
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState(COLORS[0].hex);
   const [typedText, setTypedText] = useState('');
   const [fontFamily, setFontFamily] = useState(FONTS[0].family);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
@@ -116,7 +120,7 @@ export default function SignatureModal({ kind, onClose, onConfirm }: Props) {
               className={`rounded-t-md px-3 py-1.5 text-xs font-medium capitalize transition ${
                 tab === t
                   ? 'border-b-2 border-indigo-600 text-indigo-600'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                  : 'text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300'
               }`}
             >
               {t}
@@ -134,7 +138,7 @@ export default function SignatureModal({ kind, onClose, onConfirm }: Props) {
               />
               <div className="mt-3 flex items-center justify-between">
                 <ColorPicker color={color} setColor={setColor} />
-                <button onClick={clearDraw} className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
+                <button onClick={clearDraw} className="text-xs text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300">
                   Clear
                 </button>
               </div>
@@ -187,14 +191,14 @@ export default function SignatureModal({ kind, onClose, onConfirm }: Props) {
                 </label>
               )}
               {uploadedUrl && (
-                <button onClick={() => setUploadedUrl(null)} className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
+                <button onClick={() => setUploadedUrl(null)} className="text-xs text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300">
                   Choose a different image
                 </button>
               )}
             </div>
           )}
 
-          <label className="mt-4 flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+          <label className="mt-4 flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
             <input type="checkbox" checked={saveToLibrary} onChange={(e) => setSaveToLibrary(e.target.checked)} />
             Save to my signatures for reuse
           </label>
@@ -221,10 +225,13 @@ function ColorPicker({ color, setColor }: { color: string; setColor: (c: string)
     <div className="flex items-center gap-1.5">
       {COLORS.map((c) => (
         <button
-          key={c}
-          onClick={() => setColor(c)}
-          className={`h-5 w-5 rounded-full border-2 ${color === c ? 'border-indigo-500' : 'border-transparent'}`}
-          style={{ backgroundColor: c }}
+          key={c.hex}
+          onClick={() => setColor(c.hex)}
+          aria-label={`${c.name} ink color`}
+          aria-pressed={color === c.hex}
+          title={c.name}
+          className={`h-5 w-5 rounded-full border-2 ${color === c.hex ? 'border-indigo-500' : 'border-transparent'}`}
+          style={{ backgroundColor: c.hex }}
         />
       ))}
     </div>

@@ -17,16 +17,20 @@ export default function MobilePageSheet({ onClose }: Props) {
     onClose();
   }
 
+  const titleId = 'mobile-page-sheet-title';
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end sm:hidden" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
         className="relative max-h-[70vh] rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:bg-neutral-900"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
         <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-          <h3 className="text-sm font-semibold">Pages ({pages.length})</h3>
-          <button onClick={onClose} className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+          <h2 id={titleId} className="text-sm font-semibold">Pages ({pages.length})</h2>
+          <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">
             <X size={18} />
           </button>
         </div>
@@ -42,7 +46,7 @@ export default function MobilePageSheet({ onClose }: Props) {
               <div className="w-full overflow-hidden rounded border border-neutral-300 shadow-sm dark:border-neutral-700">
                 <PageThumb page={page} targetWidth={220} />
               </div>
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">{i + 1}</span>
+              <span className="text-[11px] text-neutral-600 dark:text-neutral-400">{i + 1}</span>
             </button>
           ))}
         </div>

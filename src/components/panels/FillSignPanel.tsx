@@ -103,13 +103,13 @@ export default function FillSignPanel() {
         ))}
         <button
           onClick={() => setModalKind('signature')}
-          className="flex h-9 flex-none items-center gap-1 rounded-md border border-dashed border-neutral-300 px-2.5 text-xs text-neutral-500 hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700"
+          className="flex h-9 flex-none items-center gap-1 rounded-md border border-dashed border-neutral-300 px-2.5 text-xs text-neutral-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700"
         >
           <PenTool size={13} /> Signature
         </button>
         <button
           onClick={() => setModalKind('initials')}
-          className="flex h-9 flex-none items-center gap-1 rounded-md border border-dashed border-neutral-300 px-2.5 text-xs text-neutral-500 hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700"
+          className="flex h-9 flex-none items-center gap-1 rounded-md border border-dashed border-neutral-300 px-2.5 text-xs text-neutral-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700"
         >
           <Plus size={13} /> Initials
         </button>

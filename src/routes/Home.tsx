@@ -234,12 +234,13 @@ export default function Home() {
         </div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight">PDF Pro</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
             Edit, sign, and organize PDFs — 100% offline, nothing leaves your device.
           </p>
         </div>
       </header>
 
+      <main>
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -260,7 +261,7 @@ export default function Home() {
           <FileUp className={`mb-3 text-neutral-400 transition-transform duration-200 ${dragOver ? '-translate-y-1 text-indigo-500' : ''}`} size={32} />
         )}
         <p className="mb-1 font-medium">Drop a PDF or image here</p>
-        <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">or choose a tool below</p>
+        <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">or choose a tool below</p>
         <input
           ref={(el) => {
             inputRefs.current['open'] = el;
@@ -281,7 +282,7 @@ export default function Home() {
       {CATEGORIES.map((category, catIndex) => (
         <div key={category} className={catIndex > 0 ? 'mt-8' : ''}>
           <h2
-            className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+            className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400"
             style={{ animationDelay: `${80 + catIndex * 40}ms` }}
           >
             {category}
@@ -326,7 +327,7 @@ export default function Home() {
 
       {recents.length > 0 && (
         <div className="mt-12 animate-fade-in" style={{ animationDelay: '80ms' }}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
             Recent files
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -350,7 +351,7 @@ export default function Home() {
                 <div className="flex items-start gap-2 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs font-medium">{file.name}</div>
-                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400">
                       {file.pageCount} page{file.pageCount === 1 ? '' : 's'}
                     </div>
                   </div>
@@ -368,8 +369,9 @@ export default function Home() {
           </div>
         </div>
       )}
+      </main>
 
-      <footer className="mt-auto pt-12 text-center text-xs text-neutral-400 dark:text-neutral-600">
+      <footer className="mt-auto pt-12 text-center text-xs text-neutral-600 dark:text-neutral-400">
         Your files are processed entirely in your browser. Nothing is uploaded anywhere.
       </footer>
 
@@ -419,7 +421,7 @@ function ToolCard({
       </div>
       <div>
         <div className="text-sm font-medium">{label}</div>
-        <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">{description}</div>
+        <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">{description}</div>
       </div>
     </button>
   );

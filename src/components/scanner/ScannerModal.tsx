@@ -293,13 +293,19 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     };
   }
 
+  const titleId = 'scanner-modal-title';
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-black"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
       <div className="flex items-center justify-between px-4 py-3 text-white">
-        <button onClick={onClose} className="rounded-full p-1.5 hover:bg-white/10">
+        <button onClick={onClose} aria-label="Close scanner" className="rounded-full p-1.5 hover:bg-white/10">
           <X size={20} />
         </button>
-        <h3 className="text-sm font-medium">
+        <h3 id={titleId} className="text-sm font-medium">
           {phase === 'review' ? 'Review Scan' : phase === 'adjust' ? 'Adjust Crop' : 'Scan Document'}
         </h3>
         <div className="w-8" />
@@ -433,6 +439,7 @@ export default function ScannerModal({ onClose, onDone }: Props) {
             <button
               onClick={capture}
               disabled={!!cameraError}
+              aria-label="Take photo"
               className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 transition active:scale-95 disabled:opacity-30"
             >
               <div className="h-12 w-12 rounded-full bg-white" />

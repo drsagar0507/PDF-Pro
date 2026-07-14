@@ -62,11 +62,11 @@ export default function ProtectPanel() {
         </div>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Password</span>
+          <span className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Password</span>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Enter a password" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Confirm password</span>
+          <span className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Confirm password</span>
           <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="input" placeholder="Re-enter the password" />
         </label>
 
@@ -81,7 +81,7 @@ export default function ProtectPanel() {
           </label>
         </div>
 
-        <div className="flex items-start gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-400">
           <Info size={26} className="flex-none" />
           <p>Don't forget this password — it can't be recovered. Nothing here is uploaded anywhere; encryption happens on your device.</p>
         </div>

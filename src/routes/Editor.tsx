@@ -132,7 +132,7 @@ export default function Editor() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-none items-center gap-1 border-b border-neutral-200 bg-white px-2 py-2 sm:gap-2 sm:px-3 dark:border-neutral-800 dark:bg-neutral-900">
-        <button onClick={handleHome} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Home">
+        <button onClick={handleHome} className="rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Home">
           <Home size={18} />
         </button>
 
@@ -159,23 +159,23 @@ export default function Editor() {
 
         {/* Desktop-only controls */}
         <div className="mx-1 hidden h-5 w-px bg-neutral-200 sm:block dark:bg-neutral-700" />
-        <button onClick={undo} disabled={past.length === 0} className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 sm:block dark:hover:bg-neutral-800" title="Undo">
+        <button onClick={undo} disabled={past.length === 0} className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 sm:block dark:hover:bg-neutral-800" title="Undo">
           <Undo2 size={16} />
         </button>
-        <button onClick={redo} disabled={future.length === 0} className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 sm:block dark:hover:bg-neutral-800" title="Redo">
+        <button onClick={redo} disabled={future.length === 0} className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 sm:block dark:hover:bg-neutral-800" title="Redo">
           <Redo2 size={16} />
         </button>
         {showViewerChrome && (
           <>
             <div className="mx-1 hidden h-5 w-px bg-neutral-200 sm:block dark:bg-neutral-700" />
-            <button onClick={toggleThumbRail} className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Toggle thumbnails">
+            <button onClick={toggleThumbRail} className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Toggle thumbnails">
               {showThumbRail ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
-            <button onClick={() => setZoom(zoom - 0.1)} className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Zoom out">
+            <button onClick={() => setZoom(zoom - 0.1)} className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Zoom out">
               <ZoomOut size={16} />
             </button>
-            <span className="hidden w-12 text-center text-xs tabular-nums text-neutral-500 sm:inline-block">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(zoom + 0.1)} className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Zoom in">
+            <span className="hidden w-12 text-center text-xs tabular-nums text-neutral-600 sm:inline-block">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(zoom + 0.1)} className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 sm:block dark:hover:bg-neutral-800" title="Zoom in">
               <ZoomIn size={16} />
             </button>
           </>
@@ -190,7 +190,7 @@ export default function Editor() {
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
-                  mode === m.id ? 'bg-white text-indigo-700 shadow-sm dark:bg-neutral-700 dark:text-indigo-300' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                  mode === m.id ? 'bg-white text-indigo-700 shadow-sm dark:bg-neutral-700 dark:text-indigo-300' : 'text-neutral-600 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
                 <Icon size={14} />
@@ -204,7 +204,7 @@ export default function Editor() {
           {showViewerChrome && (
             <button
               onClick={() => setSearchOpen((v) => !v)}
-              className={`rounded-md p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 ${searchOpen ? 'text-indigo-600' : 'text-neutral-500'}`}
+              className={`rounded-md p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 ${searchOpen ? 'text-indigo-600' : 'text-neutral-600'}`}
               title="Search"
             >
               <Search size={18} />
@@ -213,14 +213,14 @@ export default function Editor() {
           <button
             onClick={handlePrint}
             disabled={printing || pages.length === 0}
-            className="hidden rounded-md p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-40 sm:block dark:hover:bg-neutral-800"
+            className="hidden rounded-md p-2 text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 sm:block dark:hover:bg-neutral-800"
             title="Print"
           >
             {printing ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
           </button>
           <button
             onClick={() => setScannerOpen(true)}
-            className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
             title="Scan a document"
           >
             <ScanLine size={18} />
@@ -228,7 +228,7 @@ export default function Editor() {
 
           {/* Mobile-only overflow menu for undo/redo/zoom/thumbnails */}
           <div className="relative sm:hidden">
-            <button onClick={() => setMoreOpen((v) => !v)} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="More">
+            <button onClick={() => setMoreOpen((v) => !v)} className="rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="More">
               <MoreVertical size={18} />
             </button>
             {moreOpen && (
@@ -258,6 +258,7 @@ export default function Editor() {
           <button
             onClick={handleSave}
             disabled={busy || pages.length === 0}
+            aria-label="Save"
             className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50 sm:px-3.5"
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
@@ -270,7 +271,8 @@ export default function Editor() {
       {mode === 'annotate' && <AnnotatePanel />}
       {mode === 'fillsign' && <FillSignPanel />}
 
-      <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+      <main className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+        <h1 className="sr-only">{fileName} — PDF Pro editor</h1>
         {showViewerChrome && showThumbRail && <ThumbRail />}
         {mode === 'organize' && (
           <div key="organize" className="animate-fade-in flex min-w-0 flex-1">
@@ -288,11 +290,16 @@ export default function Editor() {
           </div>
         )}
         {showViewerChrome && (
-          <main className="min-w-0 flex-1 overflow-y-auto bg-neutral-200 dark:bg-neutral-950">
+          <div
+            className="min-w-0 flex-1 overflow-y-auto bg-neutral-200 dark:bg-neutral-950"
+            tabIndex={0}
+            role="region"
+            aria-label="Document pages"
+          >
             <PageList />
-          </main>
+          </div>
         )}
-      </div>
+      </main>
 
       {/* Mobile bottom tab bar for mode switching */}
       <nav
@@ -306,7 +313,7 @@ export default function Editor() {
               key={m.id}
               onClick={() => setMode(m.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                mode === m.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-500 dark:text-neutral-400'
+                mode === m.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-600 dark:text-neutral-400'
               }`}
             >
               <Icon size={19} />
