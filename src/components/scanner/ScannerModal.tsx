@@ -108,7 +108,7 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     if (!video || video.videoWidth === 0) return;
     setFlash(true);
     setTimeout(() => setFlash(false), 180);
-    const maxDim = 2200;
+    const maxDim = 3000;
     const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(video.videoWidth * scale);
@@ -124,7 +124,7 @@ export default function ScannerModal({ onClose, onDone }: Props) {
     if (!file) return;
     const img = new Image();
     img.onload = () => {
-      const maxDim = 2200;
+      const maxDim = 3000;
       const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.naturalWidth * scale);

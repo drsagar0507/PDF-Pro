@@ -16,7 +16,7 @@ import type { Point } from './perspectiveWarp';
 export function detectDocumentQuad(
   source: HTMLCanvasElement,
 ): [Point, Point, Point, Point] | null {
-  const workWidth = 360;
+  const workWidth = 480;
   const scale = workWidth / source.width;
   const workHeight = Math.max(1, Math.round(source.height * scale));
 
@@ -32,17 +32,28 @@ export function detectDocumentQuad(
   const mag = sobelMagnitude(blurred, workWidth, workHeight);
   const threshold = otsuThreshold(mag);
 
-  const points: Point[] = [];
   // Ignore a thin border margin — camera vignetting / frame edges produce
   // spurious high-gradient pixels right at the image boundary.
   const margin = Math.round(Math.min(workWidth, workHeight) * 0.02);
+  const mask = new Uint8Array(workWidth * workHeight);
   for (let y = margin; y < workHeight - margin; y++) {
     for (let x = margin; x < workWidth - margin; x++) {
-      if (mag[y * workWidth + x] >= threshold) points.push({ x, y });
+      if (mag[y * workWidth + x] >= threshold) mask[y * workWidth + x] = 1;
     }
   }
 
-  if (points.length < 60) return null;
+  // A real photo background (wood grain, fabric, other objects, shadows)
+  // is full of edges that have nothing to do with the page — taking the
+  // hull of every thresholded pixel lets a single stray edge anywhere in
+  // frame drag the detected rectangle off the actual boundary. Dilating
+  // the mask (bridges small gaps from JPEG blocking/uneven contrast along
+  // the real edge) and keeping only the largest *connected* component
+  // isolates the one contour that's actually traced continuously around
+  // the page, which background clutter essentially never is.
+  const dilated = dilate3x3(mask, workWidth, workHeight);
+  const points = largestComponentPoints(dilated, workWidth, workHeight);
+
+  if (points.length < 80) return null;
 
   const hull = convexHull(points);
   if (hull.length < 4) return null;
@@ -64,6 +75,86 @@ export function detectDocumentQuad(
 
 function clamp01(v: number): number {
   return Math.min(1, Math.max(0, v));
+}
+
+function dilate3x3(mask: Uint8Array, w: number, h: number): Uint8Array {
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let hit = false;
+      for (let dy = -1; dy <= 1 && !hit; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) continue;
+          if (mask[yy * w + xx]) {
+            hit = true;
+            break;
+          }
+        }
+      }
+      out[y * w + x] = hit ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+/** Finds the largest 8-connected component in a binary mask (BFS-based,
+ * iterative to avoid stack limits) and returns its member points. The
+ * real page boundary traces one long continuous contour; background
+ * clutter (texture, shadows, other objects) is almost always scattered
+ * into many small, disconnected pieces by comparison. */
+function largestComponentPoints(mask: Uint8Array, w: number, h: number): Point[] {
+  const visited = new Uint8Array(w * h);
+  const queue = new Int32Array(w * h);
+  let bestPoints: Point[] = [];
+  let bestBoxArea = -1;
+
+  for (let start = 0; start < w * h; start++) {
+    if (!mask[start] || visited[start]) continue;
+
+    let qHead = 0;
+    let qTail = 0;
+    queue[qTail++] = start;
+    visited[start] = 1;
+    const compPoints: Point[] = [];
+    let minX = w, maxX = 0, minY = h, maxY = 0;
+
+    while (qHead < qTail) {
+      const idx = queue[qHead++];
+      const x = idx % w;
+      const y = (idx / w) | 0;
+      compPoints.push({ x, y });
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) continue;
+          const nIdx = yy * w + xx;
+          if (mask[nIdx] && !visited[nIdx]) {
+            visited[nIdx] = 1;
+            queue[qTail++] = nIdx;
+          }
+        }
+      }
+    }
+
+    const boxArea = (maxX - minX + 1) * (maxY - minY + 1);
+    if (boxArea > bestBoxArea) {
+      bestBoxArea = boxArea;
+      bestPoints = compPoints;
+    }
+  }
+
+  return bestPoints;
 }
 
 function toGrayscale(data: Uint8ClampedArray, w: number, h: number): Float32Array {

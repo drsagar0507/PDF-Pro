@@ -50,9 +50,13 @@ export function getImageSize(bytes: Uint8Array, format: 'png' | 'jpg'): Promise<
   });
 }
 
-/** Assume images are ~96dpi screen assets and convert to PDF points (72/in)
- * so a typical photo lands at a sane physical page size. */
-export const PX_TO_PT = 72 / 96;
+/** Converts an image's pixel dimensions to PDF points assuming ~200dpi —
+ * a reasonable stand-in for "this is meant to be a normal-sized page"
+ * (scans, in particular, should land close to Letter/A4, not the ~23x29in
+ * page a 96dpi screen-asset assumption would produce for a 2000px+ wide
+ * scan). The full pixel data is still embedded either way — this only
+ * changes what physical size the page *claims* to be. */
+export const PX_TO_PT = 72 / 200;
 
 export function downloadBytes(bytes: Uint8Array, filename: string, mime = 'application/pdf'): void {
   const blob = new Blob([asBufferSource(bytes)], { type: mime });

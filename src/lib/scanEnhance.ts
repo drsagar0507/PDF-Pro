@@ -15,60 +15,107 @@ function percentileFromHistogram(hist: number[], total: number, percentile: numb
   return 255;
 }
 
-function otsuFromHistogram(hist: number[], total: number): number {
-  let sumAll = 0;
-  for (let t = 0; t < 256; t++) sumAll += t * hist[t];
-  let sumB = 0;
-  let wB = 0;
-  let best = 128;
-  let bestVariance = -1;
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (wB === 0) continue;
-    const wF = total - wB;
-    if (wF === 0) break;
-    sumB += t * hist[t];
-    const mB = sumB / wB;
-    const mF = (sumAll - sumB) / wF;
-    const variance = wB * wF * (mB - mF) * (mB - mF);
-    if (variance > bestVariance) {
-      bestVariance = variance;
-      best = t;
+/** O(w*h) sliding-window box blur (separable), independent of radius —
+ * lets sharpening/local-contrast use a radius matched to the image's
+ * actual resolution instead of a fixed tiny window that only touches
+ * single-pixel noise. */
+function boxBlurChannel(src: Float32Array, w: number, h: number, radius: number): Float32Array {
+  if (radius < 1) return src.slice();
+  const temp = new Float32Array(w * h);
+  const out = new Float32Array(w * h);
+  const win = radius * 2 + 1;
+
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let sum = 0;
+    for (let x = -radius; x <= radius; x++) sum += src[row + Math.min(w - 1, Math.max(0, x))];
+    temp[row] = sum / win;
+    for (let x = 1; x < w; x++) {
+      const add = src[row + Math.min(w - 1, x + radius)];
+      const sub = src[row + Math.max(0, x - radius - 1)];
+      sum += add - sub;
+      temp[row + x] = sum / win;
     }
   }
-  return best;
+
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let y = -radius; y <= radius; y++) sum += temp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    out[x] = sum / win;
+    for (let y = 1; y < h; y++) {
+      const add = temp[Math.min(h - 1, y + radius) * w + x];
+      const sub = temp[Math.max(0, y - radius - 1) * w + x];
+      sum += add - sub;
+      out[y * w + x] = sum / win;
+    }
+  }
+
+  return out;
 }
 
-/** Light unsharp mask: out = orig + amount * (orig - blur(orig)). Cheap
- * separable-ish box blur stand-in for a Gaussian, applied per channel. */
-function unsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: number) {
-  const blurred = new Uint8ClampedArray(data.length);
+/** Unsharp mask with a radius scaled to image resolution — a fixed 1px
+ * radius only ever touches per-pixel noise and does nothing perceptible
+ * for actual character strokes at real photo resolution. */
+function unsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: number, radius: number) {
+  for (let c = 0; c < 3; c++) {
+    const channel = new Float32Array(w * h);
+    for (let p = 0, i = c; p < w * h; p++, i += 4) channel[p] = data[i];
+    const blurred = boxBlurChannel(channel, w, h, radius);
+    for (let p = 0, i = c; p < w * h; p++, i += 4) {
+      data[i] = Math.min(255, Math.max(0, channel[p] + amount * (channel[p] - blurred[p])));
+    }
+  }
+}
+
+/** Summed-area table for O(1) local-window sums. */
+function integralImage(gray: Float32Array, w: number, h: number): Float64Array {
+  const stride = w + 1;
+  const integral = new Float64Array(stride * (h + 1));
   for (let y = 0; y < h; y++) {
+    let rowSum = 0;
     for (let x = 0; x < w; x++) {
-      for (let c = 0; c < 3; c++) {
-        let sum = 0;
-        let count = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-          const yy = y + dy;
-          if (yy < 0 || yy >= h) continue;
-          for (let dx = -1; dx <= 1; dx++) {
-            const xx = x + dx;
-            if (xx < 0 || xx >= w) continue;
-            sum += data[(yy * w + xx) * 4 + c];
-            count++;
-          }
-        }
-        blurred[(y * w + x) * 4 + c] = sum / count;
-      }
+      rowSum += gray[y * w + x];
+      integral[(y + 1) * stride + (x + 1)] = integral[y * stride + (x + 1)] + rowSum;
     }
   }
-  for (let i = 0; i < data.length; i += 4) {
-    for (let c = 0; c < 3; c++) {
-      const orig = data[i + c];
-      const blur = blurred[i + c];
-      data[i + c] = Math.min(255, Math.max(0, orig + amount * (orig - blur)));
+  return integral;
+}
+
+/**
+ * Bradley/Wellner adaptive threshold: classifies each pixel as ink if it's
+ * meaningfully darker than the *local* neighborhood average, rather than
+ * one global cutoff for the whole page. A single global threshold (plain
+ * Otsu) assumes uniform lighting, which real handheld photos essentially
+ * never have — one corner is reliably brighter than another, and a global
+ * cutoff either blacks out the dim side or blows out text on the bright
+ * side. This is the standard technique real scanning apps use for exactly
+ * this reason.
+ */
+function adaptiveThreshold(gray: Float32Array, w: number, h: number): Uint8Array {
+  const integral = integralImage(gray, w, h);
+  const stride = w + 1;
+  const windowSize = Math.max(25, Math.round(Math.min(w, h) / 8));
+  const half = Math.floor(windowSize / 2);
+  const sensitivity = 0.85; // pixel must be < 85% of local mean to count as ink
+
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - half);
+    const y1 = Math.min(h - 1, y + half);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - half);
+      const x1 = Math.min(w - 1, x + half);
+      const count = (x1 - x0 + 1) * (y1 - y0 + 1);
+      const sum =
+        integral[(y1 + 1) * stride + (x1 + 1)] -
+        integral[y0 * stride + (x1 + 1)] -
+        integral[(y1 + 1) * stride + x0] +
+        integral[y0 * stride + x0];
+      const mean = sum / count;
+      out[y * w + x] = gray[y * w + x] < mean * sensitivity ? 1 : 0;
     }
   }
+  return out;
 }
 
 /**
@@ -76,15 +123,16 @@ function unsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: numb
  * indoor/tungsten lighting (gray-world white balance anchored to the
  * brightest — presumably paper — pixels), stretches contrast using
  * percentile clipping (robust to a few blown-out or crushed outlier
- * pixels), and lightly sharpens. `bw` mode binarizes with an automatic
- * (Otsu) threshold instead of a fixed cutoff, so it adapts to how dark or
- * bright the actual scan turned out.
+ * pixels), and sharpens at a radius matched to resolution. `bw` mode
+ * binarizes with a locally-adaptive threshold so unevenly-lit scans still
+ * come out fully legible instead of losing text to shadow.
  */
 export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')!;
   const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const d = img.data;
   const pixelCount = d.length / 4;
+  const sharpenRadius = Math.max(1, Math.round(Math.min(canvas.width, canvas.height) / 400));
 
   const lumaHist = new Array(256).fill(0);
   let brightR = 0, brightG = 0, brightB = 0, brightCount = 0;
@@ -104,16 +152,13 @@ export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTML
   }
 
   if (filter === 'bw') {
-    const grayHist = new Array(256).fill(0);
-    const grayVals = new Float32Array(pixelCount);
+    const gray = new Float32Array(pixelCount);
     for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const g = luminance(d[i], d[i + 1], d[i + 2]);
-      grayVals[p] = g;
-      grayHist[Math.round(g)]++;
+      gray[p] = luminance(d[i], d[i + 1], d[i + 2]);
     }
-    const t = otsuFromHistogram(grayHist, pixelCount);
+    const ink = adaptiveThreshold(gray, canvas.width, canvas.height);
     for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const v = grayVals[p] >= t ? 255 : 0;
+      const v = ink[p] ? 0 : 255;
       d[i] = d[i + 1] = d[i + 2] = v;
     }
     ctx.putImageData(img, 0, 0);
@@ -155,7 +200,7 @@ export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTML
     d[i + 2] = Math.min(255, Math.max(0, b));
   }
 
-  unsharpMask(d, canvas.width, canvas.height, 0.35);
+  unsharpMask(d, canvas.width, canvas.height, 0.6, sharpenRadius);
 
   if (filter === 'grayscale') {
     for (let i = 0; i < d.length; i += 4) {
