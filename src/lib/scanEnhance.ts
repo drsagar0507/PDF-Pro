@@ -53,6 +53,20 @@ function boxBlurChannel(src: Float32Array, w: number, h: number, radius: number)
   return out;
 }
 
+/** Light median-ish denoise: a 3x3 blur blended partially with the
+ * original, applied before sharpening so the sharpen pass amplifies real
+ * edges instead of sensor/JPEG noise. */
+function denoiseChannel(data: Uint8ClampedArray, w: number, h: number, amount: number) {
+  for (let c = 0; c < 3; c++) {
+    const channel = new Float32Array(w * h);
+    for (let p = 0, i = c; p < w * h; p++, i += 4) channel[p] = data[i];
+    const smoothed = boxBlurChannel(channel, w, h, 1);
+    for (let p = 0, i = c; p < w * h; p++, i += 4) {
+      data[i] = channel[p] * (1 - amount) + smoothed[p] * amount;
+    }
+  }
+}
+
 /** Unsharp mask with a radius scaled to image resolution — a fixed 1px
  * radius only ever touches per-pixel noise and does nothing perceptible
  * for actual character strokes at real photo resolution. */
@@ -67,36 +81,127 @@ function unsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: numb
   }
 }
 
-/** Summed-area table for O(1) local-window sums. */
-function integralImage(gray: Float32Array, w: number, h: number): Float64Array {
+function integralSum(values: Float32Array, w: number, h: number): Float64Array {
   const stride = w + 1;
-  const integral = new Float64Array(stride * (h + 1));
+  const sum = new Float64Array(stride * (h + 1));
   for (let y = 0; y < h; y++) {
     let rowSum = 0;
     for (let x = 0; x < w; x++) {
-      rowSum += gray[y * w + x];
-      integral[(y + 1) * stride + (x + 1)] = integral[y * stride + (x + 1)] + rowSum;
+      rowSum += values[y * w + x];
+      sum[(y + 1) * stride + (x + 1)] = sum[y * stride + (x + 1)] + rowSum;
     }
   }
-  return integral;
+  return sum;
+}
+
+function windowSum(integral: Float64Array, stride: number, x0: number, y0: number, x1: number, y1: number): number {
+  return (
+    integral[(y1 + 1) * stride + (x1 + 1)] -
+    integral[y0 * stride + (x1 + 1)] -
+    integral[(y1 + 1) * stride + x0] +
+    integral[y0 * stride + x0]
+  );
 }
 
 /**
- * Bradley/Wellner adaptive threshold: classifies each pixel as ink if it's
- * meaningfully darker than the *local* neighborhood average, rather than
- * one global cutoff for the whole page. A single global threshold (plain
- * Otsu) assumes uniform lighting, which real handheld photos essentially
- * never have — one corner is reliably brighter than another, and a global
- * cutoff either blacks out the dim side or blows out text on the bright
- * side. This is the standard technique real scanning apps use for exactly
- * this reason.
+ * Shading correction / flat-fielding: estimates the slowly-varying paper
+ * brightness across the page and divides it out, so the result reads as
+ * evenly lit corner-to-corner — the way an actual flatbed scan looks —
+ * instead of visibly brighter on one side the way a handheld photo under
+ * one light source always is. Without this, contrast stretching alone
+ * still leaves that gradient sitting right on top of the text.
+ *
+ * The estimate only counts pixels bright enough to plausibly be paper
+ * (not ink) in each neighborhood's average — a naive blur gets dragged
+ * down near any dense block of dark text, which paints a shadow-like halo
+ * around paragraphs instead of a clean flat page.
  */
-function adaptiveThreshold(gray: Float32Array, w: number, h: number): Uint8Array {
-  const integral = integralImage(gray, w, h);
+function flattenIllumination(data: Uint8ClampedArray, w: number, h: number) {
+  const luma = new Float32Array(w * h);
+  for (let p = 0, i = 0; p < w * h; p++, i += 4) luma[p] = luminance(data[i], data[i + 1], data[i + 2]);
+
+  const hist = new Array(256).fill(0);
+  for (let p = 0; p < luma.length; p++) hist[Math.max(0, Math.min(255, Math.round(luma[p])))]++;
+  const paperCutoff = percentileFromHistogram(hist, luma.length, 45);
+
+  const maskedLuma = new Float32Array(w * h);
+  const mask = new Float32Array(w * h);
+  for (let p = 0; p < luma.length; p++) {
+    if (luma[p] >= paperCutoff) {
+      maskedLuma[p] = luma[p];
+      mask[p] = 1;
+    }
+  }
+  const sumLuma = integralSum(maskedLuma, w, h);
+  const sumMask = integralSum(mask, w, h);
+  const stride = w + 1;
+
+  const bgRadius = Math.max(24, Math.round(Math.min(w, h) / 7));
+  const background = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - bgRadius);
+    const y1 = Math.min(h - 1, y + bgRadius);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - bgRadius);
+      const x1 = Math.min(w - 1, x + bgRadius);
+      const sL = windowSum(sumLuma, stride, x0, y0, x1, y1);
+      const sM = windowSum(sumMask, stride, x0, y0, x1, y1);
+      // Fall back to the raw pixel if there's no plausible paper nearby
+      // (e.g. deep inside a solid dark region) rather than divide by ~0.
+      background[y * w + x] = sM > 6 ? sL / sM : luma[y * w + x];
+    }
+  }
+
+  const bgHist = new Array(256).fill(0);
+  for (let p = 0; p < background.length; p++) bgHist[Math.max(0, Math.min(255, Math.round(background[p])))]++;
+  const reference = Math.max(60, percentileFromHistogram(bgHist, background.length, 95));
+
+  for (let p = 0, i = 0; p < w * h; p++, i += 4) {
+    const factor = reference / Math.max(8, background[p]);
+    data[i] = Math.min(255, data[i] * factor);
+    data[i + 1] = Math.min(255, data[i + 1] * factor);
+    data[i + 2] = Math.min(255, data[i + 2] * factor);
+  }
+}
+
+/** Summed-area tables (of values and of squared values) for O(1) local
+ * mean + standard deviation lookups. */
+function integralImages(gray: Float32Array, w: number, h: number): { sum: Float64Array; sumSq: Float64Array } {
+  const stride = w + 1;
+  const sum = new Float64Array(stride * (h + 1));
+  const sumSq = new Float64Array(stride * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    let rowSumSq = 0;
+    for (let x = 0; x < w; x++) {
+      const v = gray[y * w + x];
+      rowSum += v;
+      rowSumSq += v * v;
+      sum[(y + 1) * stride + (x + 1)] = sum[y * stride + (x + 1)] + rowSum;
+      sumSq[(y + 1) * stride + (x + 1)] = sumSq[y * stride + (x + 1)] + rowSumSq;
+    }
+  }
+  return { sum, sumSq };
+}
+
+/**
+ * Sauvola's adaptive threshold: like Bradley's method, judges each pixel
+ * against its local neighborhood rather than one global cutoff — but also
+ * factors in local *contrast* (standard deviation), so a truly flat, blank
+ * patch of paper (low contrast) stays firmly classified as background even
+ * if JPEG noise nudges a few pixels slightly darker, while genuine text
+ * strokes (high local contrast against the paper) still binarize cleanly.
+ * This is the standard, well-benchmarked method for document binarization
+ * — a meaningful step up from plain Bradley for exactly the noise-in-
+ * blank-areas failure mode that a fixed percentage threshold has.
+ */
+function sauvolaThreshold(gray: Float32Array, w: number, h: number): Uint8Array {
+  const { sum, sumSq } = integralImages(gray, w, h);
   const stride = w + 1;
   const windowSize = Math.max(25, Math.round(Math.min(w, h) / 8));
   const half = Math.floor(windowSize / 2);
-  const sensitivity = 0.85; // pixel must be < 85% of local mean to count as ink
+  const k = 0.34;
+  const R = 128;
 
   const out = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) {
@@ -106,26 +211,28 @@ function adaptiveThreshold(gray: Float32Array, w: number, h: number): Uint8Array
       const x0 = Math.max(0, x - half);
       const x1 = Math.min(w - 1, x + half);
       const count = (x1 - x0 + 1) * (y1 - y0 + 1);
-      const sum =
-        integral[(y1 + 1) * stride + (x1 + 1)] -
-        integral[y0 * stride + (x1 + 1)] -
-        integral[(y1 + 1) * stride + x0] +
-        integral[y0 * stride + x0];
-      const mean = sum / count;
-      out[y * w + x] = gray[y * w + x] < mean * sensitivity ? 1 : 0;
+      const s =
+        sum[(y1 + 1) * stride + (x1 + 1)] - sum[y0 * stride + (x1 + 1)] - sum[(y1 + 1) * stride + x0] + sum[y0 * stride + x0];
+      const sq =
+        sumSq[(y1 + 1) * stride + (x1 + 1)] - sumSq[y0 * stride + (x1 + 1)] - sumSq[(y1 + 1) * stride + x0] + sumSq[y0 * stride + x0];
+      const mean = s / count;
+      const variance = Math.max(0, sq / count - mean * mean);
+      const stddev = Math.sqrt(variance);
+      const threshold = mean * (1 + k * (stddev / R - 1));
+      out[y * w + x] = gray[y * w + x] < threshold ? 1 : 0;
     }
   }
   return out;
 }
 
 /**
- * Enhances a captured document photo in place: corrects color cast from
- * indoor/tungsten lighting (gray-world white balance anchored to the
- * brightest — presumably paper — pixels), stretches contrast using
- * percentile clipping (robust to a few blown-out or crushed outlier
- * pixels), and sharpens at a radius matched to resolution. `bw` mode
- * binarizes with a locally-adaptive threshold so unevenly-lit scans still
- * come out fully legible instead of losing text to shadow.
+ * Enhances a captured document photo in place: flattens uneven lighting
+ * (shading correction) so the page reads as evenly lit rather than
+ * visibly brighter on one side, corrects color cast from indoor/tungsten
+ * lighting (gray-world white balance), stretches contrast, denoises, and
+ * sharpens at a radius matched to resolution. `bw` mode binarizes with
+ * Sauvola's locally-adaptive, contrast-aware threshold so unevenly-lit,
+ * slightly noisy scans still come out fully legible and clean.
  */
 export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')!;
@@ -134,11 +241,27 @@ export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTML
   const pixelCount = d.length / 4;
   const sharpenRadius = Math.max(1, Math.round(Math.min(canvas.width, canvas.height) / 400));
 
+  if (filter === 'bw') {
+    const gray = new Float32Array(pixelCount);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      gray[p] = luminance(d[i], d[i + 1], d[i + 2]);
+    }
+    const ink = sauvolaThreshold(gray, canvas.width, canvas.height);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const v = ink[p] ? 0 : 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+  }
+
+  flattenIllumination(d, canvas.width, canvas.height);
+
   const lumaHist = new Array(256).fill(0);
   let brightR = 0, brightG = 0, brightB = 0, brightCount = 0;
   for (let i = 0; i < d.length; i += 4) {
     const l = luminance(d[i], d[i + 1], d[i + 2]);
-    lumaHist[Math.round(l)]++;
+    lumaHist[Math.max(0, Math.min(255, Math.round(l)))]++;
   }
   const brightThreshold = percentileFromHistogram(lumaHist, pixelCount, 90);
   for (let i = 0; i < d.length; i += 4) {
@@ -149,20 +272,6 @@ export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTML
       brightB += d[i + 2];
       brightCount++;
     }
-  }
-
-  if (filter === 'bw') {
-    const gray = new Float32Array(pixelCount);
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      gray[p] = luminance(d[i], d[i + 1], d[i + 2]);
-    }
-    const ink = adaptiveThreshold(gray, canvas.width, canvas.height);
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const v = ink[p] ? 0 : 255;
-      d[i] = d[i + 1] = d[i + 2] = v;
-    }
-    ctx.putImageData(img, 0, 0);
-    return canvas;
   }
 
   // Gray-world white balance anchored to the brightest decile (the paper
@@ -200,7 +309,8 @@ export function enhanceScan(canvas: HTMLCanvasElement, filter: ScanFilter): HTML
     d[i + 2] = Math.min(255, Math.max(0, b));
   }
 
-  unsharpMask(d, canvas.width, canvas.height, 0.6, sharpenRadius);
+  denoiseChannel(d, canvas.width, canvas.height, 0.25);
+  unsharpMask(d, canvas.width, canvas.height, 0.7, sharpenRadius);
 
   if (filter === 'grayscale') {
     for (let i = 0; i < d.length; i += 4) {
